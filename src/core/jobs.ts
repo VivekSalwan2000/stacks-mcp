@@ -42,16 +42,34 @@ export async function startJob(web: Web, kind: JobKind, params: { url: string; g
   return jobId(kind, await web.agentStart(params));
 }
 
-/** JSON Schema for a TinyFish Agent's structured output, in the subset TinyFish accepts. */
+/**
+ * JSON Schema for a TinyFish Agent's structured output, in the subset TinyFish
+ * accepts: no `$schema`, `additionalProperties` or `description`, and nullable
+ * fields written as `nullable: true` (type arrays and null unions are rejected).
+ */
 export function agentSchema(schema: z.ZodType): Record<string, unknown> {
+  const isNull = (n: unknown) => !!n && typeof n === "object" && (n as { type?: unknown }).type === "null";
   const strip = (node: unknown): unknown => {
     if (Array.isArray(node)) return node.map(strip);
     if (node && typeof node === "object") {
-      return Object.fromEntries(
+      let obj = Object.fromEntries(
         Object.entries(node as Record<string, unknown>)
           .filter(([k, v]) => !(["$schema", "additionalProperties"].includes(k) || (k === "description" && typeof v === "string")))
           .map(([k, v]) => [k, strip(v)]),
       );
+      if (Array.isArray(obj.type) && obj.type.includes("null")) {
+        const rest = obj.type.filter((t) => t !== "null");
+        obj = { ...obj, type: rest.length === 1 ? rest[0] : rest, nullable: true };
+      }
+      for (const key of ["anyOf", "oneOf"] as const) {
+        const union = obj[key];
+        if (Array.isArray(union) && union.some(isNull)) {
+          const rest = union.filter((n) => !isNull(n));
+          const { [key]: _dropped, ...others } = obj;
+          obj = rest.length === 1 ? { ...others, ...(rest[0] as object), nullable: true } : { ...others, [key]: rest, nullable: true };
+        }
+      }
+      return obj;
     }
     return node;
   };

@@ -41,6 +41,8 @@ export interface HealthReport {
   verified_platform_version: string;
   checks: Check[];
   diagnosis_job_id: string | null;
+  /** Why the Agent diagnosis could not be started, if `deep` was asked for and it failed. */
+  diagnosis_error: string | null;
   tinyfish_calls: Record<Endpoint, number>;
   checked_at: string;
 }
@@ -135,7 +137,19 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
   const landmarks = adapter.landmarks(library).filter((l) => !skipped.has(l.url.split("?")[0]!) && !skipped.has(l.url));
   const started = Date.now();
   try {
-    const pages = await web.fetch(landmarks.map((l) => l.url));
+    let pages = await web.fetch(landmarks.map((l) => l.url));
+    // Fetch occasionally returns a page partly rendered. Read the failing pages once more
+    // before reporting them, so a one-off does not raise a false alarm.
+    const intact = (l: (typeof landmarks)[number], from: typeof pages) => {
+      const text = (from.find((p) => p.url === l.url)?.text ?? "").toLowerCase();
+      return !!text && l.must_contain.every((m) => text.includes(m.toLowerCase()));
+    };
+    const again = landmarks.filter((l) => !intact(l, pages));
+    if (again.length) {
+      const second = await web.fetch(again.map((l) => l.url)).catch(() => []);
+      const better = new Set(again.filter((l) => intact(l, second)).map((l) => l.url));
+      pages = [...pages.filter((p) => !better.has(p.url)), ...second.filter((p) => better.has(p.url))];
+    }
     for (const l of landmarks) {
       const page = pages.find((p) => p.url === l.url);
       const text = (page?.text ?? "").toLowerCase();
@@ -178,6 +192,7 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
 
   const failed = checks.filter((c) => c.status === "fail");
   let diagnosis: string | null = null;
+  let diagnosisError: string | null = null;
   if (opts.deep && failed.length) {
     const target = failed.find((c) => c.url) ?? failed[0]!;
     diagnosis = await startJob(web, "diagnosis", {
@@ -194,7 +209,10 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
           what_looks_different: z.string().describe("What on the page explains the failure."),
         }),
       ),
-    }).catch(() => null);
+    }).catch((err: unknown) => {
+      diagnosisError = (err as Error).message;
+      return null;
+    });
   }
 
   const calls = Object.fromEntries((Object.keys(web.usage) as Endpoint[]).map((k) => [k, web.usage[k] - before[k]])) as Record<Endpoint, number>;
@@ -209,6 +227,7 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
     verified_platform_version: KNOWN_PLATFORM_VERSION,
     checks,
     diagnosis_job_id: diagnosis,
+    diagnosis_error: diagnosisError,
     tinyfish_calls: calls,
     checked_at: new Date().toISOString(),
   };
@@ -223,6 +242,7 @@ export function formatReport(r: HealthReport): string {
     for (const f of c.broken_fields) lines.push(`         broken: ${f}`);
   }
   if (r.diagnosis_job_id) lines.push("", `Agent diagnosis started: ${r.diagnosis_job_id}`);
+  if (r.diagnosis_error) lines.push("", `Agent diagnosis could not be started: ${r.diagnosis_error}`);
   lines.push("", `TinyFish calls: ${Object.entries(r.tinyfish_calls).map(([k, v]) => `${k}=${v}`).join(" ")}`);
   return lines.join("\n");
 }

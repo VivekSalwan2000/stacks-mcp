@@ -322,6 +322,7 @@ Run live checks against a library's website to confirm every Stacks tool still w
 | `platform_version` | string,null | Version of the library platform seen on the site now. |
 | `verified_platform_version` | string | Platform version these tools were last verified against. |
 | `checks` | object[] |  |
-| `diagnosis_job_id` | string,null |  |
+| `diagnosis_job_id` | string,null | Pass to get_job_result for the Agent's diagnosis of the failing page. |
+| `diagnosis_error` | string,null | Why the Agent diagnosis could not be started, if it could not. |
 | `tinyfish_calls` | object | TinyFish calls this check made, by endpoint. |
 | `checked_at` | string |  |

@@ -96,7 +96,14 @@ export const getJobResult = defineTool({
   handler: async ({ job_id }, ctx) => {
     const { kind, runId } = parseJobId(job_id);
     const run = await ctx.web.agentGet(runId);
-    const state = jobState(run);
+    let state = jobState(run);
+    // A fallback that read nothing is a failure, not an answer of "no results".
+    if (state.status === "completed" && (kind === "search" || kind === "availability")) {
+      const rows = state.result[kind === "search" ? "results" : "copies"];
+      if (!Array.isArray(rows) || rows.length === 0) {
+        state = { status: "failed", error: "The Agent finished but could not read any rows from the page. Treat this as no answer, not as an empty result." };
+      }
+    }
     return {
       job_id,
       kind,

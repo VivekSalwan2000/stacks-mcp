@@ -64,10 +64,17 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
     if (!this.validId(id)) {
       throw new StacksError("UNKNOWN_LIBRARY", `"${id}" is not a valid library id.`, { hint: "Call find_library to get the library_id for a city or library name." });
     }
-    const read = await this.web.readPage(url, { stateSelector: STATE_SELECTOR, ...opts });
+    let read = await this.web.readPage(url, { stateSelector: STATE_SELECTOR, ...opts });
     if (read.state !== null) return read;
 
-    const host = new URL(read.finalUrl || url).host;
+    let host = new URL(read.finalUrl || url).host;
+    if (read.status >= 200 && read.status < 400 && host === `${id}.bibliocommons.com`) {
+      // The page loaded without its data. This is occasionally a one-off (a partial
+      // response), so read it once more before declaring that the site changed.
+      read = await this.web.readPage(url, { stateSelector: STATE_SELECTOR, ...opts });
+      if (read.state !== null) return read;
+      host = new URL(read.finalUrl || url).host;
+    }
     const details = { url, http_status: read.status };
     if (read.status === 404 || host !== `${id}.bibliocommons.com`) {
       throw new StacksError("UNKNOWN_LIBRARY", `No BiblioCommons library with id "${id}".`, { hint: "Call find_library to get the right library_id.", details });
@@ -125,18 +132,30 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
     });
   }
 
-  async getTitle(id: string, titleId: string): Promise<Sourced<TitleRecord>> {
+  async getTitle(id: string, titleId: string, followed = false): Promise<Sourced<TitleRecord>> {
     if (!/^S\d+C\d+$/.test(titleId)) {
       throw new StacksError("INVALID_INPUT", `"${titleId}" is not a valid title_id.`, { hint: "title_id looks like S234C3970025. Get one from search_catalog." });
     }
     const url = this.recordUrl(id, titleId);
     return this.cached(`bc:${id}:title:${titleId}`, TTL.availability, async () => {
-      const hasRecord = (s: unknown) => Object.keys((s as { entities?: { catalogBibs?: object } })?.entities?.catalogBibs ?? {}).length > 0;
+      // Only wait for the availability request when the page is about this very title.
+      const hasRecord = (s: unknown) => titleId in ((s as { entities?: { catalogBibs?: object } })?.entities?.catalogBibs ?? {});
       const read = await this.read(id, url, "title", {
         capture: { availability: new RegExp(`/bibs/${titleId}/availability`) },
         shouldCapture: hasRecord,
       });
       const state = contract(RawRecordState, read.state, { contract: "title page", url });
+      // An id from another library is redirected by the site to this library's own
+      // record for the same work. Follow it once instead of misreading the page.
+      const shown = Object.keys(state.entities.catalogBibs ?? {});
+      if (shown.length > 0 && !shown.includes(titleId)) {
+        const own = shown[0]!;
+        if (!followed && /^S\d+C\d+$/.test(own)) {
+          const real = await this.getTitle(id, own, true);
+          return this.stamp(real.data, real.source.url ?? this.recordUrl(id, own));
+        }
+        throw new StacksError("NOT_FOUND", `No title with id ${titleId} at this library.`, { hint: "Get a valid title_id from search_catalog." });
+      }
       const details = parseRecord(state, titleId, this.catalogUrl(id));
       if (read.captured.availability === undefined) {
         throw new StacksError("SITE_CHANGED", "The title page loaded but never requested its per-branch availability data.", {

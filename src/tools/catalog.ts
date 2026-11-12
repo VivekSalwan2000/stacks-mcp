@@ -27,8 +27,9 @@ async function withAgentFallback<T>(ctx: Context, kind: "search" | "availability
       try {
         err.details.fallback_job_id = await startJob(ctx.web, kind, ctx.adapter.agentFallback(kind, library, arg));
         err.details.fallback = "A slower TinyFish Agent run was started to read the page instead. Poll get_job_result with fallback_job_id. Its result is best-effort and not schema-validated.";
-      } catch {
-        // The fallback is a courtesy. The SITE_CHANGED error is the important signal.
+      } catch (startErr) {
+        // The fallback is a courtesy and SITE_CHANGED stays the signal, but say that it could not start.
+        err.details.fallback = `A TinyFish Agent fallback could not be started: ${(startErr as Error).message}`;
       }
     }
     throw err;
@@ -197,7 +198,7 @@ export const checkAvailability = defineTool({
     if (args.on_shelf_only) branches = branches.filter((b) => b.copies_on_shelf > 0);
     return {
       library,
-      title_id: args.title_id,
+      title_id: data.details.title_id, // the library's own id, if the site redirected the one asked for
       title: data.details.title,
       format: data.details.format,
       summary: data.summary,
@@ -288,7 +289,7 @@ export const estimateWait = defineTool({
 
     return {
       library,
-      title_id: args.title_id,
+      title_id: data.details.title_id, // the library's own id, if the site redirected the one asked for
       title: data.details.title,
       format: data.details.format,
       available_now: onShelfAt.length > 0,

@@ -1,6 +1,6 @@
 {
   "name": "stacks-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Give your AI agent a library card. An MCP server that turns public-library websites (BiblioCommons) into typed agent tools, powered by TinyFish.",
   "license": "MIT",
   "type": "module",
