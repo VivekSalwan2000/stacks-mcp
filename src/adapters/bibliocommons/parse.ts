@@ -99,14 +99,21 @@ export function libraryInfo(id: string, app: z.infer<typeof RawApp>, libraries: 
 
 export function summarize(a: RawAvailability | null | undefined): AvailabilitySummary {
   if (!a) return { status: "unknown", total_copies: null, available_copies: null, holds: null, on_order_copies: null };
-  const total = a.totalCopies ?? null;
-  const available = a.availableCopies ?? null;
+  let total = a.totalCopies ?? null;
+  let available = a.availableCopies ?? null;
   const onOrder = a.onOrderCopies ?? null;
   let status: AvailabilitySummary["status"];
-  if (a.status === "AVAILABLE" || a.statusType === "AVAILABLE" || (available ?? 0) > 0) status = "available";
+  // The site calls a title "available" when the only copy in is for use inside the library.
+  if (a.libraryUseOnly || /LIBRARY_USE_ONLY/.test(a.localisedStatus ?? "")) status = "library_use_only";
+  else if (a.status === "AVAILABLE" || a.statusType === "AVAILABLE" || (available ?? 0) > 0) status = "available";
   else if ((total ?? 0) > 0) status = "all_copies_in_use";
   else if ((onOrder ?? 0) > 0) status = "on_order";
   else status = "unavailable";
+  // "Available" with 0 of 0 copies means the site did not send counts with this result, not that there are none.
+  if (status === "available" && !total && !available) {
+    total = null;
+    available = null;
+  }
   return { status, total_copies: total, available_copies: available, holds: a.heldCopies ?? null, on_order_copies: onOrder };
 }
 
@@ -183,6 +190,16 @@ function fieldValues(bib: z.infer<typeof RawCatalogBib>, name: string, category?
   return [...new Set(out.map((v) => v.trim()).filter(Boolean))];
 }
 
+/** Catalogue ISBN fields carry notes and prices ("9780684830421 (hbk.) $25.00"): keep the number, once. */
+export function cleanIsbns(raw: string[]): string[] {
+  const out: string[] = [];
+  for (const value of raw) {
+    const m = value.replace(/[-\s](?=\d)/g, "").match(/\b(97[89]\d{10}|\d{9}[\dXx])\b/);
+    if (m && !out.includes(m[1]!.toUpperCase())) out.push(m[1]!.toUpperCase());
+  }
+  return out;
+}
+
 export function parseRecord(state: z.infer<typeof RawRecordState>, titleId: string, base: string): TitleDetails {
   const cat = state.entities.catalogBibs?.[titleId] ?? Object.values(state.entities.catalogBibs ?? {})[0];
   if (!cat) throw new StacksError("NOT_FOUND", `No title with id ${titleId} at this library.`, { hint: "Get a valid title_id from search_catalog." });
@@ -213,7 +230,7 @@ export function parseRecord(state: z.infer<typeof RawRecordState>, titleId: stri
     contributors: (cat.brief.creators ?? []).map((c) => ({ name: c.fullName.replace(/,\s*$/, ""), roles: c.relationships ?? [] })),
     publisher: fieldValues(cat, "PUBLICATION", "DETAILS")[0] ?? fieldValues(cat, "PUBLICATION")[0] ?? null,
     physical_description: fieldValues(cat, "DESCRIPTION")[0] ?? null,
-    isbns: fieldValues(cat, "ISBN").length ? fieldValues(cat, "ISBN") : (self?.briefInfo.isbns ?? []),
+    isbns: cleanIsbns(fieldValues(cat, "ISBN").length ? fieldValues(cat, "ISBN") : (self?.briefInfo.isbns ?? [])),
     subjects: fieldValues(cat, "SUBJECT").slice(0, 12),
     genres: fieldValues(cat, "GENRE").slice(0, 8),
   };
@@ -223,12 +240,15 @@ function toCopy(item: RawBibItem): Copy {
   const a = item.availability;
   const label = a.libraryStatus && /[a-z]/.test(a.libraryStatus) ? a.libraryStatus : titleCase(a.libraryStatus || a.status);
   let status: Copy["status"];
+  // Some libraries send only UNAVAILABLE plus their own wording ("Checked Out", "On Loan"),
+  // so the wording is read when the status code does not say.
+  const wording = (a.libraryStatus ?? "").toLowerCase();
   if (a.libraryUseOnly || a.status === "LIBRARY_USE_ONLY") status = "library_use_only";
   else if (a.status === "AVAILABLE") status = "on_shelf";
-  else if (a.status === "CHECKED_OUT") status = "checked_out";
-  else if (a.status === "IN_TRANSIT") status = "in_transit";
-  else if (a.status === "ON_ORDER") status = "on_order";
-  else if (/hold\s*shelf/i.test(a.libraryStatus ?? "")) status = "on_hold_shelf";
+  else if (a.status === "CHECKED_OUT" || /\b(checked out|on loan|overdue)\b/.test(wording)) status = "checked_out";
+  else if (/hold\s*shelf/.test(wording)) status = "on_hold_shelf";
+  else if (a.status === "IN_TRANSIT" || /\b(transit|transferred)\b/.test(wording)) status = "in_transit";
+  else if (a.status === "ON_ORDER" || /\bon order\b/.test(wording)) status = "on_order";
   else status = "unavailable";
   return { status, status_label: label, collection: item.collection || null, call_number: item.callNumber || null, due_date: item.dueDate || null };
 }
@@ -339,6 +359,9 @@ function toEvent(ev: RawEvent, state: z.infer<typeof RawEventsState>, base: stri
   const names = (ids: string[] | null | undefined, table: Record<string, { name: string }> | null | undefined) =>
     (ids ?? []).map((id) => table?.[id]?.name).filter((n): n is string => !!n);
   const branch = d.branchLocationId ? state.entities.locations?.[d.branchLocationId] : undefined;
+  // Sign-up runs through the library's own system (BIBLIO_EVENTS) or an outside organiser (EXTERNAL).
+  const reg = d.registrationInfo;
+  const registrationRequired = (reg?.enabledMethods ?? []).length > 0 || reg?.provider === "BIBLIO_EVENTS" || reg?.provider === "EXTERNAL";
   return {
     event_id: ev.id,
     title: d.title.trim(),
@@ -353,8 +376,8 @@ function toEvent(ev: RawEvent, state: z.infer<typeof RawEventsState>, base: stri
     audiences: names(d.audienceIds, state.entities.eventAudiences),
     types: names(d.typeIds, state.entities.eventTypes),
     languages: names(d.languageIds, state.entities.eventLanguages),
-    registration_required: (d.registrationInfo?.enabledMethods ?? []).length > 0,
-    registration_closed: !!ev.registrationClosed,
+    registration_required: registrationRequired,
+    registration_closed: !!ev.registrationClosed || (registrationRequired && ev.registrationWindow?.status === "ENDED"),
     is_full: !!ev.isFull,
     is_cancelled: !!d.isCancelled,
     is_recurring: !!ev.isRecurring,

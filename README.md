@@ -156,9 +156,9 @@ Every network call Stacks makes is a TinyFish call. There is no canned data and 
 - `health_check` fetches each page and checks that its landmark sections are still there. This is the first, cheapest layer of change detection.
 - The directory of 54 libraries is built and re-verified with Fetch (`npm run refresh-registry`).
 
-**Agent** navigates and reasons. It is slower (20 to 60 seconds), so Stacks gives it the jobs that need judgment:
+**Agent** navigates and reasons. It is much slower (1 to 3 minutes for a full answer), so Stacks gives it the jobs that need judgment:
 - `ask_library` answers open questions ("How do I get a card as a non-resident?") by browsing the library's own website and returning an answer with its source URLs.
-- **Fallback.** If a fast tool hits `SITE_CHANGED`, Stacks starts an Agent run to read the page anyway and returns its `fallback_job_id` inside the error. The agent can still get an answer, and the break is still reported.
+- **Fallback.** If a fast tool hits `SITE_CHANGED`, Stacks starts an Agent run to read the page anyway and returns its `fallback_job_id` inside the error. The break is still reported either way. The fallback is best-effort: in testing the Agent sometimes read no rows from a page, and Stacks reports such a run as a failed job, never as an empty result.
 - **Diagnosis.** `health_check --deep` sends an Agent to a failing page to describe what changed, so the maintainer starts with an explanation.
 
 Agent runs can outlast a client's tool timeout, so Agent tools wait up to 40 seconds and then return a `job_id` for `get_job_result`.
@@ -174,7 +174,7 @@ Agent runs can outlast a client's tool timeout, so Agent tools wait up to 40 sec
 | `search_catalog`, `check_availability`, `get_branch` | 2 to 5 s |
 | `list_events` with filters | 5 to 7 s |
 | Any repeat call within the cache window | under 20 ms |
-| `ask_library` | about 40 s |
+| `ask_library` | 1 to 3 minutes (returns a `job_id` after about 50 s) |
 
 ## Breaks loudly, not silently
 
@@ -249,8 +249,11 @@ All error codes: `INVALID_INPUT`, `UNKNOWN_LIBRARY`, `NOT_FOUND`, `NOT_SUPPORTED
 | `STACKS_AGENT_WAIT_MS` | `40000` | How long Agent tools wait before returning a `job_id` |
 | `STACKS_HTTP_TOKEN` | none | Secret required by `--http` mode when it uses the server's own key |
 | `PORT` | `3000` | Port for `--http` mode |
+| `HOST` | see below | Address `--http` mode listens on |
 
-In `--http` mode a caller can send their own key in an `x-tinyfish-api-key` header. Without that header the server uses its own key, and only for requests that present `STACKS_HTTP_TOKEN`.
+In `--http` mode a caller can send their own key in an `x-tinyfish-api-key` header. Without that header the server uses its own key, and only for requests that present `STACKS_HTTP_TOKEN`. If no token is set, the server listens on `127.0.0.1` only and refuses requests that carry another website's `Origin`, so it is safe for local use but not reachable remotely.
+
+Arguments that do not match a tool's input schema are rejected by the MCP layer before the tool runs, with a plain message naming the field (for example `Too big: expected number to be <=50 at page`). Every other failure uses the structured `{ error: { code, message, hint } }` format.
 
 ## Responsible use
 

@@ -100,12 +100,22 @@ export interface Web {
 
 const BLOCKED_RESOURCES = new Set(["image", "font", "media", "stylesheet"]);
 const IDLE_CLOSE_MS = 90_000;
+/** A remote session is replaced after this long, before the service retires it under us. */
+const MAX_SESSION_AGE_MS = 4 * 60_000;
+/** Nothing a page read does may take longer than this: a dead session must fail, not hang. */
+const PAGE_DEADLINE_MS = 80_000;
+
+class PageDeadline extends Error {
+  override name = "TimeoutError";
+}
 
 /** One warm remote browser, reused across calls and closed when idle. */
 class BrowserPool {
   private browser?: Browser;
   private opening?: Promise<Browser>;
   private idle?: NodeJS.Timeout;
+  private openedAt = 0;
+  private inFlight = 0;
 
   constructor(
     private client: TinyFish,
@@ -113,7 +123,11 @@ class BrowserPool {
   ) {}
 
   private async open(): Promise<Browser> {
-    if (this.browser?.isConnected()) return this.browser;
+    if (this.browser?.isConnected()) {
+      const stale = Date.now() - this.openedAt > MAX_SESSION_AGE_MS;
+      if (!stale || this.inFlight > 0) return this.browser;
+      this.discard();
+    }
     this.opening ??= (async () => {
       const session = await this.client.browser.sessions.create({
         proxy_config: this.proxy.enabled
@@ -125,11 +139,19 @@ class BrowserPool {
         if (this.browser === browser) this.browser = undefined;
       });
       this.browser = browser;
+      this.openedAt = Date.now();
       return browser;
     })().finally(() => {
       this.opening = undefined;
     });
     return this.opening;
+  }
+
+  /** Drop the current session without waiting on it: it may be the thing that is stuck. */
+  private discard() {
+    const b = this.browser;
+    this.browser = undefined;
+    void b?.close().catch(() => {});
   }
 
   async withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
@@ -138,24 +160,44 @@ class BrowserPool {
     for (;;) {
       const browser = await this.open();
       let page: Page | undefined;
+      let timer: NodeJS.Timeout | undefined;
+      this.inFlight++;
       try {
-        const context = browser.contexts()[0] ?? (await browser.newContext());
-        page = await context.newPage();
-        await page.route("**/*", (route) =>
-          BLOCKED_RESOURCES.has(route.request().resourceType()) ? route.abort() : route.continue(),
-        );
-        return await fn(page);
+        const work = (async () => {
+          const context = browser.contexts()[0] ?? (await browser.newContext());
+          page = await context.newPage();
+          await page.route("**/*", (route) =>
+            BLOCKED_RESOURCES.has(route.request().resourceType()) ? route.abort() : route.continue(),
+          );
+          return fn(page);
+        })();
+        const deadline = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new PageDeadline(`Timed out: the remote browser did not answer within ${PAGE_DEADLINE_MS / 1000} s`)), PAGE_DEADLINE_MS);
+        });
+        work.catch(() => {}); // if the deadline wins, the abandoned work must not become an unhandled rejection
+        return await Promise.race([work, deadline]);
       } catch (err) {
-        const msg = (err as Error)?.message ?? "";
-        const dropped = /Target.*closed|has been closed|disconnected|ECONNRESET|WebSocket/i.test(msg);
-        if (dropped && attempt++ < 1) {
-          this.browser = undefined;
+        if (err instanceof PageDeadline) {
+          // The session is stuck. Replace it for the next call; do not make this caller wait again.
+          if (this.browser === browser) this.discard();
+          throw err;
+        }
+        // A navigation timeout or a typed error is the page's answer. Anything else is
+        // treated as a broken session and tried once more on a fresh one.
+        const pageAnswered = err instanceof StacksError || (err as Error)?.name === "TimeoutError";
+        if (!pageAnswered && attempt++ < 1) {
+          if (this.browser === browser) this.discard();
           continue;
         }
         throw err;
       } finally {
-        await page?.close().catch(() => {});
-        this.idle = setTimeout(() => void this.close(), IDLE_CLOSE_MS);
+        clearTimeout(timer);
+        this.inFlight--;
+        void (page as Page | undefined)?.close().catch(() => {});
+        if (this.idle) clearTimeout(this.idle);
+        this.idle = setTimeout(() => {
+          if (this.inFlight === 0) void this.close();
+        }, IDLE_CLOSE_MS);
         this.idle.unref();
       }
     }
@@ -285,7 +327,9 @@ export class TinyFishWeb implements Web {
       return { run_id: run.run_id, status: run.status, result: run.result ?? null, error: run.error?.message ?? null, steps: run.num_of_steps ?? null };
     } catch (err) {
       const e = toStacksError(err);
-      if ((err as { status?: number })?.status === 404) throw new StacksError("NOT_FOUND", `No Agent run with id ${runId}.`);
+      if ((err as { status?: number })?.status === 404 || /not found/i.test((err as Error)?.message ?? "")) {
+        throw new StacksError("NOT_FOUND", `No Agent run with id ${runId}.`, { hint: "Use the job_id exactly as a Stacks tool returned it. Runs are kept by TinyFish for a limited time." });
+      }
       throw e;
     }
   }

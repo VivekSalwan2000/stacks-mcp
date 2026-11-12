@@ -9,6 +9,8 @@ RUN npm run build && npm prune --omit=dev
 FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
+# Inside a container the server must listen on all interfaces to be reachable.
+ENV HOST=0.0.0.0
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist

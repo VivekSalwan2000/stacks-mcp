@@ -8,9 +8,10 @@
  *   - If the request carries an `x-tinyfish-api-key` header, that key is used.
  *   - Otherwise the server's own TINYFISH_API_KEY is used, but only if the
  *     request presents STACKS_HTTP_TOKEN (as a Bearer token or as the path
- *     /mcp/<token>). Without STACKS_HTTP_TOKEN set, the server's key is open
- *     to anyone who can reach it: only do that on localhost.
+ *     /mcp/<token>). Without STACKS_HTTP_TOKEN set, the server listens on
+ *     127.0.0.1 only and refuses requests that come from another website.
  */
+import { createHash, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Config } from "./core/config.js";
@@ -19,6 +20,23 @@ import { buildServer, VERSION } from "./server.js";
 
 const MAX_BODY = 1_000_000;
 const MAX_KEYED_CONTEXTS = 20;
+
+/** Compare secrets without leaking, through timing, how much of a guess was right. */
+function sameSecret(given: string | null | undefined, expected: string): boolean {
+  if (!given) return false;
+  const digest = (s: string) => createHash("sha256").update(s).digest();
+  return timingSafeEqual(digest(given), digest(expected));
+}
+
+/** True for a browser page served from this machine. */
+function isLocalOrigin(origin: string): boolean {
+  try {
+    const h = new URL(origin).hostname;
+    return h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h.endsWith(".localhost");
+  } catch {
+    return false;
+  }
+}
 
 function json(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
@@ -60,8 +78,13 @@ export function startHttp(config: Partial<Config> & { port: number }, env: NodeJ
     if (token) {
       const bearer = req.headers.authorization?.replace(/^Bearer\s+/i, "");
       const inPath = path.startsWith("/mcp/") ? decodeURIComponent(path.slice(5)) : null;
-      if (bearer !== token && inPath !== token) return { status: 401, message: "Missing or wrong access token." };
+      if (!sameSecret(bearer, token) && !sameSecret(inPath, token)) return { status: 401, message: "Missing or wrong access token." };
+      return shared;
     }
+    // Open mode: nothing but reachability protects the server's key. A web page on another
+    // site must not be able to drive it through the user's browser (DNS rebinding).
+    const origin = req.headers.origin;
+    if (typeof origin === "string" && !isLocalOrigin(origin)) return { status: 403, message: "Requests from other websites are not accepted. Set STACKS_HTTP_TOKEN to serve remote clients." };
     return shared;
   };
 
@@ -92,8 +115,10 @@ export function startHttp(config: Partial<Config> & { port: number }, env: NodeJ
     }
   });
 
-  server.listen(config.port, () => {
-    const mode = shared ? (token ? "server key, token required" : "server key, NO token (anyone who can reach this port can use your TinyFish credits)") : "bring-your-own key (x-tinyfish-api-key header)";
+  // With the server's key and no token, listen on this machine only.
+  const host = env.HOST?.trim() || (shared && !token ? "127.0.0.1" : "0.0.0.0");
+  server.listen(config.port, host, () => {
+    const mode = shared ? (token ? "server key, token required" : "server key, NO token, this machine only") : "bring-your-own key (x-tinyfish-api-key header)";
     console.error(`stacks-mcp ${VERSION} listening on http://localhost:${config.port}/mcp  [${mode}]`);
   });
 

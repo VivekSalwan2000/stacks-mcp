@@ -27,6 +27,8 @@ Environment:
   STACKS_PROXY            off | auto (default) | tinyfish | <country code>
   STACKS_HTTP_TOKEN       Access token required by --http mode when using the server's key
   PORT                    Port for --http mode (default 3000)
+  HOST                    Address --http mode listens on. Default: 127.0.0.1 when the server's
+                          key is used without a token, otherwise 0.0.0.0
 `;
 
 function flagValues(args: string[], name: string): string[] {
@@ -37,6 +39,13 @@ async function main() {
   const args = process.argv.slice(2);
   if (args.includes("--help") || args.includes("-h")) return void console.log(HELP);
   if (args.includes("--version") || args.includes("-v")) return void console.log(VERSION);
+  const takesValue = ["--port", "--library"];
+  const known = new Set(["health", "--http", "--deep", "--json", ...takesValue]);
+  const stray = args.find((a, i) => !known.has(a) && !(i > 0 && takesValue.includes(args[i - 1]!)));
+  if (stray !== undefined) {
+    console.error(`stacks-mcp: unknown argument "${stray}". Run stacks-mcp --help for usage.`);
+    process.exit(2);
+  }
   // Convenience for local development: pick up a .env file if there is one.
   if (existsSync(".env")) {
     try {

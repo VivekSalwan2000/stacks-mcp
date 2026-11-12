@@ -41,6 +41,8 @@ export interface HealthReport {
   verified_platform_version: string;
   checks: Check[];
   diagnosis_job_id: string | null;
+  /** Why the Agent diagnosis could not be started, if `deep` was asked for and it failed. */
+  diagnosis_error: string | null;
   tinyfish_calls: Record<Endpoint, number>;
   checked_at: string;
 }
@@ -91,6 +93,11 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
     }),
   );
 
+  // Nothing can be checked on a library that does not exist: say so instead of calling it broken.
+  if (checks[0]!.error_code === "UNKNOWN_LIBRARY") {
+    throw new StacksError("UNKNOWN_LIBRARY", checks[0]!.detail, { hint: "Call find_library to get the right library_id." });
+  }
+
   checks.push(
     await contractCheck("search_catalog tells 'no results' apart from 'broken'", `${base}/v2/search?query=zzqxqxzzy`, async () => {
       const { data } = await adapter.search(library, { query: "zzqxqxzzy", search_type: "keyword", page: 1 });
@@ -131,11 +138,24 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
   );
 
   // Layer 1: page landmarks via Fetch (one request for all pages).
+  // (An unknown library was already rejected below the search check.)
   const skipped = new Set(checks.filter((c) => c.status === "skipped").map((c) => c.url));
   const landmarks = adapter.landmarks(library).filter((l) => !skipped.has(l.url.split("?")[0]!) && !skipped.has(l.url));
   const started = Date.now();
   try {
-    const pages = await web.fetch(landmarks.map((l) => l.url));
+    let pages = await web.fetch(landmarks.map((l) => l.url));
+    // Fetch occasionally returns a page partly rendered. Read the failing pages once more
+    // before reporting them, so a one-off does not raise a false alarm.
+    const intact = (l: (typeof landmarks)[number], from: typeof pages) => {
+      const text = (from.find((p) => p.url === l.url)?.text ?? "").toLowerCase();
+      return !!text && l.must_contain.every((m) => text.includes(m.toLowerCase()));
+    };
+    const again = landmarks.filter((l) => !intact(l, pages));
+    if (again.length) {
+      const second = await web.fetch(again.map((l) => l.url)).catch(() => []);
+      const better = new Set(again.filter((l) => intact(l, second)).map((l) => l.url));
+      pages = [...pages.filter((p) => !better.has(p.url)), ...second.filter((p) => better.has(p.url))];
+    }
     for (const l of landmarks) {
       const page = pages.find((p) => p.url === l.url);
       const text = (page?.text ?? "").toLowerCase();
@@ -177,7 +197,20 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
   }
 
   const failed = checks.filter((c) => c.status === "fail");
+  // A site that refuses automated access is blocked, not changed. Label it that way throughout.
+  const refused = failed.filter((c) => c.layer === "contract" && c.error_code === "SITE_BLOCKED");
+  const blocked = refused.length > 0 && failed.every((c) => c.error_code === "SITE_BLOCKED" || c.layer === "landmark" || c.detail.startsWith("no canary title"));
+  if (blocked) {
+    for (const c of failed) {
+      if (c.error_code !== "SITE_BLOCKED") {
+        c.error_code = "SITE_BLOCKED";
+        c.broken_fields = [];
+        if (c.layer === "landmark") c.detail = "the site refused the request";
+      }
+    }
+  }
   let diagnosis: string | null = null;
+  let diagnosisError: string | null = null;
   if (opts.deep && failed.length) {
     const target = failed.find((c) => c.url) ?? failed[0]!;
     diagnosis = await startJob(web, "diagnosis", {
@@ -194,7 +227,10 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
           what_looks_different: z.string().describe("What on the page explains the failure."),
         }),
       ),
-    }).catch(() => null);
+    }).catch((err: unknown) => {
+      diagnosisError = (err as Error).message;
+      return null;
+    });
   }
 
   const calls = Object.fromEntries((Object.keys(web.usage) as Endpoint[]).map((k) => [k, web.usage[k] - before[k]])) as Record<Endpoint, number>;
@@ -202,13 +238,16 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
   return {
     healthy: failed.length === 0,
     library,
-    summary: failed.length
+    summary: blocked
+      ? `BLOCKED: ${new URL(base).host} refuses automated access, so no tool can read it. This is not a change to the site's pages.`
+      : failed.length
       ? `BROKEN: ${failed.length} of ${checks.length} checks failed (${failed.map((f) => f.name).join("; ")}).`
       : `Healthy: ${counts("pass")} passed, ${counts("warn")} warning(s), ${counts("skipped")} skipped.`,
     platform_version: platformVersion,
     verified_platform_version: KNOWN_PLATFORM_VERSION,
     checks,
     diagnosis_job_id: diagnosis,
+    diagnosis_error: diagnosisError,
     tinyfish_calls: calls,
     checked_at: new Date().toISOString(),
   };
@@ -223,6 +262,7 @@ export function formatReport(r: HealthReport): string {
     for (const f of c.broken_fields) lines.push(`         broken: ${f}`);
   }
   if (r.diagnosis_job_id) lines.push("", `Agent diagnosis started: ${r.diagnosis_job_id}`);
+  if (r.diagnosis_error) lines.push("", `Agent diagnosis could not be started: ${r.diagnosis_error}`);
   lines.push("", `TinyFish calls: ${Object.entries(r.tinyfish_calls).map(([k, v]) => `${k}=${v}`).join(" ")}`);
   return lines.join("\n");
 }

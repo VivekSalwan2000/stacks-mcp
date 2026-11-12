@@ -1,6 +1,6 @@
 {
   "name": "stacks-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Give your AI agent a library card. An MCP server that turns public-library websites (BiblioCommons) into typed agent tools, powered by TinyFish.",
   "license": "MIT",
   "type": "module",
@@ -28,7 +28,8 @@
     "e2e": "tsx scripts/e2e.ts",
     "refresh-registry": "tsx scripts/refresh-registry.ts",
     "prepublishOnly": "npm run build && npm test",
-    "docs": "tsx scripts/gen-tools-doc.ts"
+    "docs": "tsx scripts/gen-tools-doc.ts",
+    "qa": "npm run build && tsx scripts/qa.ts"
   },
   "keywords": [
     "mcp",
@@ -51,7 +52,7 @@
     "@types/node": "^22.10.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.12"
   },
   "repository": {
     "type": "git",

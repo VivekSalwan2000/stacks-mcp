@@ -55,6 +55,12 @@ describe("jobs and cache", () => {
     const s = JSON.stringify(agentSchema(z.object({ a: z.string().describe("x"), b: z.array(z.string()) })));
     expect(s).not.toMatch(/\$schema|additionalProperties|"description":"x"/);
   });
+  it("writes nullable fields the way TinyFish accepts", () => {
+    const s = agentSchema(z.object({ a: z.string().nullable(), b: z.array(z.object({ c: z.number().nullable() })) })) as any;
+    expect(s.properties.a).toEqual({ type: "string", nullable: true });
+    expect(s.properties.b.items.properties.c).toEqual({ type: "number", nullable: true });
+    expect(JSON.stringify(s)).not.toMatch(/"type":\[|"type":"null"|anyOf/);
+  });
   it("computes once under concurrent callers", async () => {
     const cache = new TtlCache();
     let calls = 0;

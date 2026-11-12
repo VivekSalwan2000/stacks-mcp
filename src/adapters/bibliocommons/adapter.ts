@@ -64,10 +64,17 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
     if (!this.validId(id)) {
       throw new StacksError("UNKNOWN_LIBRARY", `"${id}" is not a valid library id.`, { hint: "Call find_library to get the library_id for a city or library name." });
     }
-    const read = await this.web.readPage(url, { stateSelector: STATE_SELECTOR, ...opts });
+    let read = await this.web.readPage(url, { stateSelector: STATE_SELECTOR, ...opts });
     if (read.state !== null) return read;
 
-    const host = new URL(read.finalUrl || url).host;
+    let host = new URL(read.finalUrl || url).host;
+    if (read.status >= 200 && read.status < 400 && host === `${id}.bibliocommons.com`) {
+      // The page loaded without its data. This is occasionally a one-off (a partial
+      // response), so read it once more before declaring that the site changed.
+      read = await this.web.readPage(url, { stateSelector: STATE_SELECTOR, ...opts });
+      if (read.state !== null) return read;
+      host = new URL(read.finalUrl || url).host;
+    }
     const details = { url, http_status: read.status };
     if (read.status === 404 || host !== `${id}.bibliocommons.com`) {
       throw new StacksError("UNKNOWN_LIBRARY", `No BiblioCommons library with id "${id}".`, { hint: "Call find_library to get the right library_id.", details });
@@ -114,29 +121,69 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
 
   async search(id: string, params: SearchParams): Promise<Sourced<SearchResult>> {
     const qs = new URLSearchParams({ query: params.query, searchType: SEARCH_TYPES[params.search_type] });
-    if (params.format) qs.set("f_FORMAT", FORMAT_ALIASES[params.format.toLowerCase()] ?? params.format.toUpperCase());
+    let rawFormatCode = false;
+    if (params.format) {
+      const alias = FORMAT_ALIASES[params.format.toLowerCase().replace(/[\s-]+/g, "_")];
+      // Anything else must look like one of the platform's own codes (BK, EBOOK, BOOK_CD).
+      rawFormatCode = !alias;
+      if (!alias && !/^[A-Z][A-Z0-9_]{1,30}$/.test(params.format)) {
+        throw new StacksError("INVALID_INPUT", `"${params.format}" is not a format Stacks knows.`, {
+          hint: "Use one of the formats in details.formats, or a platform format code in capitals such as BK.",
+          details: { formats: Object.keys(FORMAT_ALIASES).sort() },
+        });
+      }
+      qs.set("f_FORMAT", alias ?? params.format);
+    }
     if (params.available_at_branch) qs.set("f_STATUS", await this.branchCode(id, params.available_at_branch));
     if (params.page > 1) qs.set("page", String(params.page));
     const url = `${this.catalogUrl(id)}/v2/search?${qs}`;
     return this.cached(`bc:${id}:search:${qs}`, TTL.search, async () => {
-      const read = await this.read(id, url, "search");
+      const read = await this.read(id, url, "search").catch((err: unknown) => {
+        if (err instanceof StacksError && err.code === "SITE_UNAVAILABLE" && rawFormatCode) {
+          // The site answers an unknown format code with a server error.
+          throw new StacksError("INVALID_INPUT", `This library does not have a format with the code "${params.format}".`, {
+            hint: "Use one of the formats in details.formats.",
+            details: { formats: Object.keys(FORMAT_ALIASES).sort() },
+          });
+        }
+        if (err instanceof StacksError && err.code === "SITE_BLOCKED" && /[<>{}]|--|;|['"]\s*(or|and)\b/i.test(params.query)) {
+          // The site's firewall rejects text that looks like markup or code, whoever sends it.
+          throw new StacksError("INVALID_INPUT", "The library's website rejected this search text.", {
+            hint: "Remove characters such as < > ; -- or quotes around OR/AND from the query and search again.",
+            details: err.details,
+          });
+        }
+        throw err;
+      });
       const state = contract(RawSearchState, read.state, { contract: "search page", url });
       return this.stamp(parseSearch(state, this.catalogUrl(id)), url);
     });
   }
 
-  async getTitle(id: string, titleId: string): Promise<Sourced<TitleRecord>> {
+  async getTitle(id: string, titleId: string, followed = false): Promise<Sourced<TitleRecord>> {
     if (!/^S\d+C\d+$/.test(titleId)) {
       throw new StacksError("INVALID_INPUT", `"${titleId}" is not a valid title_id.`, { hint: "title_id looks like S234C3970025. Get one from search_catalog." });
     }
     const url = this.recordUrl(id, titleId);
     return this.cached(`bc:${id}:title:${titleId}`, TTL.availability, async () => {
-      const hasRecord = (s: unknown) => Object.keys((s as { entities?: { catalogBibs?: object } })?.entities?.catalogBibs ?? {}).length > 0;
+      // Only wait for the availability request when the page is about this very title.
+      const hasRecord = (s: unknown) => titleId in ((s as { entities?: { catalogBibs?: object } })?.entities?.catalogBibs ?? {});
       const read = await this.read(id, url, "title", {
         capture: { availability: new RegExp(`/bibs/${titleId}/availability`) },
         shouldCapture: hasRecord,
       });
       const state = contract(RawRecordState, read.state, { contract: "title page", url });
+      // An id from another library is redirected by the site to this library's own
+      // record for the same work. Follow it once instead of misreading the page.
+      const shown = Object.keys(state.entities.catalogBibs ?? {});
+      if (shown.length > 0 && !shown.includes(titleId)) {
+        const own = shown[0]!;
+        if (!followed && /^S\d+C\d+$/.test(own)) {
+          const real = await this.getTitle(id, own, true);
+          return this.stamp(real.data, real.source.url ?? this.recordUrl(id, own));
+        }
+        throw new StacksError("NOT_FOUND", `No title with id ${titleId} at this library.`, { hint: "Get a valid title_id from search_catalog." });
+      }
       const details = parseRecord(state, titleId, this.catalogUrl(id));
       if (read.captured.availability === undefined) {
         throw new StacksError("SITE_CHANGED", "The title page loaded but never requested its per-branch availability data.", {

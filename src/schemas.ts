@@ -26,9 +26,11 @@ export const LibrarySchema = z.object({
 export type Library = z.infer<typeof LibrarySchema>;
 
 export const AvailabilitySummarySchema = z.object({
-  status: z.enum(["available", "all_copies_in_use", "on_order", "unavailable", "unknown"]),
-  total_copies: z.number().int().nullable(),
-  available_copies: z.number().int().nullable(),
+  status: z
+    .enum(["available", "library_use_only", "all_copies_in_use", "on_order", "unavailable", "unknown"])
+    .describe("available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."),
+  total_copies: z.number().int().nullable().describe("Null when the site does not report a count."),
+  available_copies: z.number().int().nullable().describe("Copies the site counts as in. Null when the site does not report a count."),
   holds: z.number().int().nullable().describe("People currently waiting for this title."),
   on_order_copies: z.number().int().nullable(),
 });
@@ -137,8 +139,8 @@ export const EventSchema = z.object({
   audiences: z.array(z.string()),
   types: z.array(z.string()),
   languages: z.array(z.string()),
-  registration_required: z.boolean(),
-  registration_closed: z.boolean(),
+  registration_required: z.boolean().describe("True if you must sign up (with the library or an outside organiser) to attend."),
+  registration_closed: z.boolean().describe("True if sign-up is required and is closed or its window has ended."),
   is_full: z.boolean(),
   is_cancelled: z.boolean(),
   is_recurring: z.boolean(),

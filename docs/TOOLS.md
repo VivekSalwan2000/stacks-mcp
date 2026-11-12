@@ -31,11 +31,11 @@ Search a library's catalogue for books, eBooks, audiobooks, DVDs and more. Retur
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `library` | string | no | Library system id such as "tpl" (Toronto), "vpl" (Vancouver), "chipublib" (Chicago). Get it from find_library. A city or library name also works. |
-| `query` | string | yes | What to search for: a title, author, subject or keywords. |
+| `query` | string | yes | What to search for: a title, author, subject or keywords. At most 200 characters. |
 | `search_type` | "keyword" \| "title" \| "author" \| "subject" \| "series" | default `"keyword"` |  |
 | `format` | string | no | Only this format: book, ebook, audiobook, eaudiobook, large_print, graphic_novel, picture_book, dvd, bluray, music_cd, magazine (or a platform format code such as BK). |
 | `available_at_branch` | string | no | Only titles with a copy available right now at this branch (name or code from list_branches). |
-| `page` | integer | default `1` | Results page, 20 per page. |
+| `page` | integer | default `1` | Results page. A page holds 20 titles at most libraries and 10 at some; `pages` gives the count. |
 
 **Output**
 
@@ -185,7 +185,8 @@ Find events and programs at a library: storytimes, book clubs, classes, author t
 | `audience` | string | no | Audience name, matched loosely, e.g. "school age", "teens", "adults". Valid values are returned in available_filters. |
 | `event_type` | string | no | Event type, matched loosely, e.g. "book club", "crafts". Valid values are returned in available_filters. |
 | `query` | string | no | Keywords to search event titles and descriptions. |
-| `page` | integer | default `1` | Results page, 20 per page. |
+| `page` | integer | default `1` | Results page, up to 20 events per page. |
+| `limit` | integer | default `20` | Return at most this many events from the page. Use a small number when you only need the next few. |
 
 **Output**
 
@@ -201,7 +202,7 @@ Find events and programs at a library: storytimes, book clubs, classes, author t
 
 ## `ask_library`
 
-Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Slower than the other tools (about 20 to 60 seconds). If it is still working it returns status 'running' with a job_id: call get_job_result with that id.
+Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Much slower than the other tools: a full answer usually takes 1 to 3 minutes. This call waits about 50 seconds; if the Agent is still working it returns status 'running' with a job_id, and you call get_job_result with that id until it is done.
 
 **Input**
 
@@ -256,7 +257,7 @@ Create a standing watch on a title using TinyFish Monitor. TinyFish re-reads the
 | `library` | string | no | Library system id such as "tpl" (Toronto), "vpl" (Vancouver), "chipublib" (Chicago). Get it from find_library. A city or library name also works. |
 | `title_id` | string | yes | A title_id from search_catalog. |
 | `check_every` | "hour" \| "6_hours" \| "day" | default `"6_hours"` | How often TinyFish re-checks the page. |
-| `webhook_url` | string | no | Optional HTTPS endpoint TinyFish calls when the page changes. |
+| `webhook_url` | string | no | Optional public HTTPS endpoint TinyFish calls when the page changes. |
 
 **Output**
 
@@ -264,6 +265,7 @@ Create a standing watch on a title using TinyFish Monitor. TinyFish re-reads the
 |---|---|---|
 | `watch` | object |  |
 | `availability_at_creation` | object |  |
+| `already_existed` | boolean | True if this title was already being watched; the existing watch is returned and nothing new is created. |
 | `source` | object | Provenance of the data. |
 
 ## `list_watches`
@@ -285,7 +287,7 @@ List the title watches created with watch_title. Set check_now to also read each
 
 ## `cancel_watch`
 
-Stop and delete a watch created with watch_title.
+Stop and permanently delete a watch created with watch_title. TinyFish stops re-checking the title and sends no more notifications. Only watches made by Stacks can be cancelled; get the watch_id from list_watches.
 
 **Input**
 
@@ -322,6 +324,7 @@ Run live checks against a library's website to confirm every Stacks tool still w
 | `platform_version` | string,null | Version of the library platform seen on the site now. |
 | `verified_platform_version` | string | Platform version these tools were last verified against. |
 | `checks` | object[] |  |
-| `diagnosis_job_id` | string,null |  |
+| `diagnosis_job_id` | string,null | Pass to get_job_result for the Agent's diagnosis of the failing page. |
+| `diagnosis_error` | string,null | Why the Agent diagnosis could not be started, if it could not. |
 | `tinyfish_calls` | object | TinyFish calls this check made, by endpoint. |
 | `checked_at` | string |  |
