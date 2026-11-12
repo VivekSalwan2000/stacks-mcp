@@ -102,3 +102,25 @@ describe("events", () => {
     expect(out).not.toMatch(/staffNotes|@tpl\.ca/);
   });
 });
+
+describe("availability summary and ISBNs", () => {
+  it("a title whose only copy in is for in-library use is not called available", async () => {
+    const { summarize } = await import("../src/adapters/bibliocommons/parse.js");
+    const s = summarize({ status: "AVAILABLE", statusType: "AVAILABLE", totalCopies: 217, availableCopies: 1, heldCopies: 177, onOrderCopies: 0, libraryUseOnly: true, localisedStatus: "LIBRARY_USE_ONLY_AT_THIS_TIME" } as any);
+    expect(s.status).toBe("library_use_only");
+    expect(s.holds).toBe(177);
+  });
+  it("'available' with 0 of 0 copies reports the counts as unknown, not zero", async () => {
+    const { summarize } = await import("../src/adapters/bibliocommons/parse.js");
+    const s = summarize({ status: "AVAILABLE", statusType: "AVAILABLE", totalCopies: 0, availableCopies: 0, heldCopies: 0, onOrderCopies: 0 } as any);
+    expect(s).toMatchObject({ status: "available", total_copies: null, available_copies: null });
+    const real = summarize({ status: "AVAILABLE", totalCopies: 13, availableCopies: 3, heldCopies: 1, onOrderCopies: 0 } as any);
+    expect(real).toMatchObject({ status: "available", total_copies: 13, available_copies: 3 });
+    const none = summarize({ status: "UNAVAILABLE", statusType: "UNAVAILABLE", totalCopies: 7, availableCopies: 0, heldCopies: 24 } as any);
+    expect(none).toMatchObject({ status: "all_copies_in_use", total_copies: 7, available_copies: 0 });
+  });
+  it("ISBNs lose their notes and prices and are listed once", async () => {
+    const { cleanIsbns } = await import("../src/adapters/bibliocommons/parse.js");
+    expect(cleanIsbns(["9780684830421 (hbk.)", "0684830426 (hbk.)", "9780684830421 $25.00", "0684830426 $26.00", "9780593438374(paperback)", "044100590X (Ace)", "978-0-441-01359-3 (pbk.)", "not an isbn"])).toEqual(["9780684830421", "0684830426", "9780593438374", "044100590X", "9780441013593"]);
+  });
+});

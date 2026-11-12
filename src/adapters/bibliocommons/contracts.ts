@@ -37,6 +37,7 @@ export const RawAvailability = z.object({
   heldCopies: optNum,
   onOrderCopies: optNum,
   libraryUseOnly: optBool,
+  localisedStatus: optStr,
 });
 export type RawAvailability = z.infer<typeof RawAvailability>;
 
@@ -180,6 +181,7 @@ export const RawEvent = z.object({
   isRecurring: optBool,
   isFull: optBool,
   registrationClosed: optBool,
+  registrationWindow: z.object({ status: optStr }).nullish(),
   definition: z.object({
     title: str,
     start: str,
@@ -191,7 +193,7 @@ export const RawEvent = z.object({
     typeIds: z.array(str).nullish(),
     languageIds: z.array(str).nullish(),
     isCancelled: optBool,
-    registrationInfo: z.object({ enabledMethods: z.array(z.unknown()).nullish() }).nullish(),
+    registrationInfo: z.object({ enabledMethods: z.array(z.unknown()).nullish(), provider: optStr }).nullish(),
   }),
 });
 export type RawEvent = z.infer<typeof RawEvent>;

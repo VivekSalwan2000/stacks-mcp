@@ -121,12 +121,40 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
 
   async search(id: string, params: SearchParams): Promise<Sourced<SearchResult>> {
     const qs = new URLSearchParams({ query: params.query, searchType: SEARCH_TYPES[params.search_type] });
-    if (params.format) qs.set("f_FORMAT", FORMAT_ALIASES[params.format.toLowerCase()] ?? params.format.toUpperCase());
+    let rawFormatCode = false;
+    if (params.format) {
+      const alias = FORMAT_ALIASES[params.format.toLowerCase().replace(/[\s-]+/g, "_")];
+      // Anything else must look like one of the platform's own codes (BK, EBOOK, BOOK_CD).
+      rawFormatCode = !alias;
+      if (!alias && !/^[A-Z][A-Z0-9_]{1,30}$/.test(params.format)) {
+        throw new StacksError("INVALID_INPUT", `"${params.format}" is not a format Stacks knows.`, {
+          hint: "Use one of the formats in details.formats, or a platform format code in capitals such as BK.",
+          details: { formats: Object.keys(FORMAT_ALIASES).sort() },
+        });
+      }
+      qs.set("f_FORMAT", alias ?? params.format);
+    }
     if (params.available_at_branch) qs.set("f_STATUS", await this.branchCode(id, params.available_at_branch));
     if (params.page > 1) qs.set("page", String(params.page));
     const url = `${this.catalogUrl(id)}/v2/search?${qs}`;
     return this.cached(`bc:${id}:search:${qs}`, TTL.search, async () => {
-      const read = await this.read(id, url, "search");
+      const read = await this.read(id, url, "search").catch((err: unknown) => {
+        if (err instanceof StacksError && err.code === "SITE_UNAVAILABLE" && rawFormatCode) {
+          // The site answers an unknown format code with a server error.
+          throw new StacksError("INVALID_INPUT", `This library does not have a format with the code "${params.format}".`, {
+            hint: "Use one of the formats in details.formats.",
+            details: { formats: Object.keys(FORMAT_ALIASES).sort() },
+          });
+        }
+        if (err instanceof StacksError && err.code === "SITE_BLOCKED" && /[<>{}]|--|;|['"]\s*(or|and)\b/i.test(params.query)) {
+          // The site's firewall rejects text that looks like markup or code, whoever sends it.
+          throw new StacksError("INVALID_INPUT", "The library's website rejected this search text.", {
+            hint: "Remove characters such as < > ; -- or quotes around OR/AND from the query and search again.",
+            details: err.details,
+          });
+        }
+        throw err;
+      });
       const state = contract(RawSearchState, read.state, { contract: "search page", url });
       return this.stamp(parseSearch(state, this.catalogUrl(id)), url);
     });

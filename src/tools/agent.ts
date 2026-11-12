@@ -17,7 +17,7 @@ export const askLibrary = defineTool({
   name: "ask_library",
   title: "Ask about a library's services",
   description:
-    "Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Slower than the other tools (about 20 to 60 seconds). If it is still working it returns status 'running' with a job_id: call get_job_result with that id.",
+    "Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Much slower than the other tools: a full answer usually takes 1 to 3 minutes. This call waits about 50 seconds; if the Agent is still working it returns status 'running' with a job_id, and you call get_job_result with that id until it is done.",
   input: {
     library: libraryArg,
     question: z.string().min(5).max(400).describe("The question, in plain language. Name the branch if it is about one branch."),

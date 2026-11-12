@@ -12,6 +12,8 @@ export interface ToolDef<I extends z.ZodRawShape, O extends z.ZodRawShape> {
   output: O;
   /** True if the tool creates or deletes something (a watch). Everything else is read-only. */
   writes?: boolean;
+  /** True if the tool permanently removes something. */
+  destructive?: boolean;
   handler: (args: z.infer<z.ZodObject<I>>, ctx: Context) => Promise<z.infer<z.ZodObject<O>>>;
 }
 
@@ -38,7 +40,7 @@ export function register(server: McpServer, def: AnyTool, getContext: () => Cont
       description: def.description,
       inputSchema: def.input,
       outputSchema: def.output,
-      annotations: { readOnlyHint: !def.writes, destructiveHint: false, idempotentHint: !def.writes, openWorldHint: true },
+      annotations: { readOnlyHint: !def.writes, destructiveHint: !!def.destructive, idempotentHint: !def.writes, openWorldHint: true },
     },
     async (args: Record<string, unknown>) => {
       try {

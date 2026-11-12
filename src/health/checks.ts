@@ -93,6 +93,11 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
     }),
   );
 
+  // Nothing can be checked on a library that does not exist: say so instead of calling it broken.
+  if (checks[0]!.error_code === "UNKNOWN_LIBRARY") {
+    throw new StacksError("UNKNOWN_LIBRARY", checks[0]!.detail, { hint: "Call find_library to get the right library_id." });
+  }
+
   checks.push(
     await contractCheck("search_catalog tells 'no results' apart from 'broken'", `${base}/v2/search?query=zzqxqxzzy`, async () => {
       const { data } = await adapter.search(library, { query: "zzqxqxzzy", search_type: "keyword", page: 1 });
@@ -133,6 +138,7 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
   );
 
   // Layer 1: page landmarks via Fetch (one request for all pages).
+  // (An unknown library was already rejected below the search check.)
   const skipped = new Set(checks.filter((c) => c.status === "skipped").map((c) => c.url));
   const landmarks = adapter.landmarks(library).filter((l) => !skipped.has(l.url.split("?")[0]!) && !skipped.has(l.url));
   const started = Date.now();
@@ -191,6 +197,18 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
   }
 
   const failed = checks.filter((c) => c.status === "fail");
+  // A site that refuses automated access is blocked, not changed. Label it that way throughout.
+  const refused = failed.filter((c) => c.layer === "contract" && c.error_code === "SITE_BLOCKED");
+  const blocked = refused.length > 0 && failed.every((c) => c.error_code === "SITE_BLOCKED" || c.layer === "landmark" || c.detail.startsWith("no canary title"));
+  if (blocked) {
+    for (const c of failed) {
+      if (c.error_code !== "SITE_BLOCKED") {
+        c.error_code = "SITE_BLOCKED";
+        c.broken_fields = [];
+        if (c.layer === "landmark") c.detail = "the site refused the request";
+      }
+    }
+  }
   let diagnosis: string | null = null;
   let diagnosisError: string | null = null;
   if (opts.deep && failed.length) {
@@ -220,7 +238,9 @@ export async function runHealth(ctx: Context, library: string, opts: { deep?: bo
   return {
     healthy: failed.length === 0,
     library,
-    summary: failed.length
+    summary: blocked
+      ? `BLOCKED: ${new URL(base).host} refuses automated access, so no tool can read it. This is not a change to the site's pages.`
+      : failed.length
       ? `BROKEN: ${failed.length} of ${checks.length} checks failed (${failed.map((f) => f.name).join("; ")}).`
       : `Healthy: ${counts("pass")} passed, ${counts("warn")} warning(s), ${counts("skipped")} skipped.`,
     platform_version: platformVersion,

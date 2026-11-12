@@ -58,11 +58,15 @@ export class FakeWeb implements Web {
   async agentWait(runId: string): Promise<AgentRun> {
     return this.agentGet(runId);
   }
-  async watchCreate(_spec: WatchSpec): Promise<{ watch: Watch; baselineText: string | null }> {
-    throw new Error("not implemented");
+  watches: Watch[] = [];
+  async watchCreate(spec: WatchSpec): Promise<{ watch: Watch; baselineText: string | null }> {
+    this.usage.monitor++;
+    const watch: Watch = { id: `watch-${this.watches.length + 1}`, name: spec.name, url: spec.url, schedule_cron: spec.schedule_cron, status: "active", last_error: null, webhook_url: spec.webhook_url ?? null, created_at: "2026-11-12 00:00:00" };
+    this.watches.push(watch);
+    return { watch, baselineText: null };
   }
   async watchList(): Promise<Watch[]> {
-    return [];
+    return this.watches;
   }
   async watchRunNow(): Promise<{ text: string | null }> {
     return { text: null };

@@ -10,6 +10,10 @@ const dateArg = (what: string) =>
   z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+    .refine((s) => {
+      const d = new Date(`${s}T00:00:00Z`);
+      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+    }, "Not a real calendar date")
     .optional()
     .describe(`${what} (YYYY-MM-DD).`);
 
@@ -84,7 +88,8 @@ export const listEvents = defineTool({
     audience: z.string().optional().describe('Audience name, matched loosely, e.g. "school age", "teens", "adults". Valid values are returned in available_filters.'),
     event_type: z.string().optional().describe('Event type, matched loosely, e.g. "book club", "crafts". Valid values are returned in available_filters.'),
     query: z.string().optional().describe("Keywords to search event titles and descriptions."),
-    page: z.number().int().min(1).max(100).default(1).describe("Results page, 20 per page."),
+    page: z.number().int().min(1).max(100).default(1).describe("Results page, up to 20 events per page."),
+    limit: z.number().int().min(1).max(20).default(20).describe("Return at most this many events from the page. Use a small number when you only need the next few."),
   },
   output: {
     library: z.string(),
@@ -109,6 +114,6 @@ export const listEvents = defineTool({
       query: args.query,
       page: args.page,
     });
-    return { library, total: data.total, page: data.page, pages: data.pages, events: data.events, available_filters: data.filters, source };
+    return { library, total: data.total, page: data.page, pages: data.pages, events: data.events.slice(0, args.limit), available_filters: data.filters, source };
   },
 });

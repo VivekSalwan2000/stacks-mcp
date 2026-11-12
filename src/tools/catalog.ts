@@ -121,14 +121,14 @@ export const searchCatalog = defineTool({
     "Search a library's catalogue for books, eBooks, audiobooks, DVDs and more. Returns typed titles with live availability counts and hold queues. Use the title_id of a result with check_availability to see which branches have a copy on the shelf.",
   input: {
     library: libraryArg,
-    query: z.string().min(1).describe("What to search for: a title, author, subject or keywords."),
+    query: z.string().min(1).max(200).describe("What to search for: a title, author, subject or keywords. At most 200 characters."),
     search_type: z.enum(["keyword", "title", "author", "subject", "series"]).default("keyword"),
     format: z
       .string()
       .optional()
       .describe("Only this format: book, ebook, audiobook, eaudiobook, large_print, graphic_novel, picture_book, dvd, bluray, music_cd, magazine (or a platform format code such as BK)."),
     available_at_branch: z.string().optional().describe("Only titles with a copy available right now at this branch (name or code from list_branches)."),
-    page: z.number().int().min(1).max(50).default(1).describe("Results page, 20 per page."),
+    page: z.number().int().min(1).max(50).default(1).describe("Results page. A page holds 20 titles at most libraries and 10 at some; `pages` gives the count."),
   },
   output: {
     library: z.string(),
@@ -192,7 +192,23 @@ export const checkAvailability = defineTool({
     let branches = data.branches;
     if (args.branch) {
       const hit = branches.find((b) => b.branch_code.toLowerCase() === args.branch!.toLowerCase()) ?? matchLabel(args.branch, branches, (b) => [b.branch_name]);
-      // A branch that owns no copy is a real answer, not an error.
+      if (!hit) {
+        // A real branch that owns no copy is an answer. A name that is no branch at all is a mistake.
+        const all = await ctx.adapter
+          .listBranches(library)
+          .then((r) => r.data)
+          .catch((err: unknown) => {
+            if (err instanceof StacksError && err.code === "NOT_SUPPORTED") return null;
+            throw err;
+          });
+        const real = all && (all.find((b) => b.branch_code.toLowerCase() === args.branch!.toLowerCase()) ?? matchLabel(args.branch, all, (b) => [b.name]));
+        if (all && !real) {
+          throw new StacksError("NOT_FOUND", `No branch matching "${args.branch}" at this library.`, {
+            hint: "Call list_branches to see valid branch names and codes.",
+            details: { examples: all.slice(0, 8).map((b) => `${b.name} (${b.branch_code})`) },
+          });
+        }
+      }
       branches = hit ? [hit] : [];
     }
     if (args.on_shelf_only) branches = branches.filter((b) => b.copies_on_shelf > 0);
