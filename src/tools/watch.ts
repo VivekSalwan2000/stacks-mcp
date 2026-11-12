@@ -1,0 +1,132 @@
+import { z } from "zod";
+import { resolveLibrary } from "../core/context.js";
+import { StacksError } from "../core/errors.js";
+import { defineTool, libraryArg, liveSource, sourceField } from "../core/tool.js";
+import { AvailabilitySummarySchema } from "../schemas.js";
+
+const SCHEDULES = { hour: "0 * * * *", "6_hours": "0 */6 * * *", day: "0 9 * * *" } as const;
+const PREFIX = "stacks";
+
+/** Watches are TinyFish Monitors whose name encodes what they watch: stacks|<library>|<title_id>|<title> */
+function decodeName(name: string | null) {
+  const [prefix, library, title_id, ...rest] = (name ?? "").split("|");
+  return prefix === PREFIX && library && title_id ? { library, title_id, title: rest.join("|") || null } : null;
+}
+
+const WatchSchema = z.object({
+  watch_id: z.string(),
+  library: z.string(),
+  title_id: z.string(),
+  title: z.string().nullable(),
+  status: z.string().describe("active, paused, failed or creating."),
+  schedule_cron: z.string(),
+  notifies: z.string().describe("Where change notifications go."),
+  last_error: z.string().nullable(),
+  created_at: z.string(),
+  current: AvailabilitySummarySchema.nullable().describe("Live availability, when check_now was requested."),
+});
+
+export const watchTitle = defineTool({
+  name: "watch_title",
+  title: "Watch a title for availability",
+  description:
+    "Create a standing watch on a title using TinyFish Monitor. TinyFish re-reads the title's page on a schedule and detects when its availability changes (for example a copy comes back on the shelf). Notifications go to the webhook you pass, or to the alerts set up in the TinyFish dashboard. Use list_watches to see watches and their current availability.",
+  writes: true,
+  input: {
+    library: libraryArg,
+    title_id: z.string().describe("A title_id from search_catalog."),
+    check_every: z.enum(["hour", "6_hours", "day"]).default("6_hours").describe("How often TinyFish re-checks the page."),
+    webhook_url: z.string().url().startsWith("https://", "Must be an https URL").optional().describe("Optional HTTPS endpoint TinyFish calls when the page changes."),
+  },
+  output: {
+    watch: WatchSchema,
+    availability_at_creation: AvailabilitySummarySchema,
+    ...sourceField,
+  },
+  handler: async (args, ctx) => {
+    const library = resolveLibrary(ctx, args.library);
+    // Confirms the title exists and gives the baseline before creating the monitor.
+    const { data } = await ctx.adapter.getTitle(library, args.title_id);
+    const title = data.details.title.replace(/\|/g, " ").slice(0, 80);
+    const url = ctx.adapter.recordUrl(library, args.title_id);
+    const { watch } = await ctx.web.watchCreate({
+      name: [PREFIX, library, args.title_id, title].join("|"),
+      url,
+      schedule_cron: SCHEDULES[args.check_every],
+      purpose: `The availability of "${title}" (${data.details.format.label}) changes: a copy becomes available to borrow, or the number of holds or copies changes.`,
+      webhook_url: args.webhook_url,
+    });
+    return {
+      watch: {
+        watch_id: watch.id,
+        library,
+        title_id: args.title_id,
+        title,
+        status: watch.status,
+        schedule_cron: watch.schedule_cron,
+        notifies: watch.webhook_url ? `webhook ${watch.webhook_url}` : "TinyFish dashboard alerts",
+        last_error: watch.last_error,
+        created_at: watch.created_at,
+        current: data.summary,
+      },
+      availability_at_creation: data.summary,
+      source: liveSource(["browser", "monitor"], url),
+    };
+  },
+});
+
+export const listWatches = defineTool({
+  name: "list_watches",
+  title: "List watches",
+  description: "List the title watches created with watch_title. Set check_now to also read each title's live availability, so you can tell the user whether a copy is available yet.",
+  input: {
+    check_now: z.boolean().default(false).describe("Also fetch live availability for each watched title (up to 5)."),
+  },
+  output: { watches: z.array(WatchSchema), ...sourceField },
+  handler: async ({ check_now }, ctx) => {
+    const all = await ctx.web.watchList();
+    const mine = all.map((w) => ({ w, meta: decodeName(w.name) })).filter((x) => x.meta !== null);
+    const watches = await Promise.all(
+      mine.map(async ({ w, meta }, i) => {
+        let current = null;
+        if (check_now && i < 5) {
+          current = await ctx.adapter
+            .getTitle(meta!.library, meta!.title_id)
+            .then((r) => r.data.summary)
+            .catch(() => null);
+        }
+        return {
+          watch_id: w.id,
+          library: meta!.library,
+          title_id: meta!.title_id,
+          title: meta!.title,
+          status: w.status,
+          schedule_cron: w.schedule_cron,
+          notifies: w.webhook_url ? `webhook ${w.webhook_url}` : "TinyFish dashboard alerts",
+          last_error: w.last_error,
+          created_at: w.created_at,
+          current,
+        };
+      }),
+    );
+    return { watches, source: liveSource(check_now ? ["monitor", "browser"] : ["monitor"], null) };
+  },
+});
+
+export const cancelWatch = defineTool({
+  name: "cancel_watch",
+  title: "Cancel a watch",
+  description: "Stop and delete a watch created with watch_title.",
+  writes: true,
+  input: { watch_id: z.string().describe("The watch_id from watch_title or list_watches.") },
+  output: { cancelled: z.boolean(), watch_id: z.string(), ...sourceField },
+  handler: async ({ watch_id }, ctx) => {
+    // Only delete monitors Stacks created: never touch the user's other TinyFish monitors.
+    const target = (await ctx.web.watchList()).find((w) => w.id === watch_id);
+    if (!target || !decodeName(target.name)) {
+      throw new StacksError("NOT_FOUND", `No Stacks watch with id ${watch_id}.`, { hint: "Call list_watches to see valid watch ids." });
+    }
+    await ctx.web.watchCancel(watch_id);
+    return { cancelled: true, watch_id, source: liveSource(["monitor"], null) };
+  },
+});

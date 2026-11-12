@@ -1,0 +1,380 @@
+[
+  {
+    "id": "aclibrary",
+    "city": "Alameda County",
+    "region": "CA",
+    "country": "US",
+    "name": "Alameda County Library"
+  },
+  {
+    "id": "arapahoelibraries",
+    "city": "Arapahoe County",
+    "region": "CO",
+    "country": "US",
+    "name": "Arapahoe Libraries"
+  },
+  {
+    "id": "austin",
+    "city": "Austin",
+    "region": "TX",
+    "country": "US",
+    "name": "Austin Public Library"
+  },
+  {
+    "id": "bpl",
+    "city": "Boston",
+    "region": "MA",
+    "country": "US",
+    "name": "Boston Public Library"
+  },
+  {
+    "id": "burnaby",
+    "city": "Burnaby",
+    "region": "BC",
+    "country": "CA",
+    "name": "Burnaby Public Library"
+  },
+  {
+    "id": "calgary",
+    "city": "Calgary",
+    "region": "AB",
+    "country": "CA",
+    "name": "Calgary Public Library"
+  },
+  {
+    "id": "cmlibrary",
+    "city": "Charlotte",
+    "region": "NC",
+    "country": "US",
+    "name": "Charlotte Mecklenburg Library"
+  },
+  {
+    "id": "chipublib",
+    "city": "Chicago",
+    "region": "IL",
+    "country": "US",
+    "name": "Chicago Public Library"
+  },
+  {
+    "id": "christchurch",
+    "city": "Christchurch",
+    "region": null,
+    "country": "NZ",
+    "name": "Christchurch City Libraries Ngā Kete Wānanga o Ōtautahi"
+  },
+  {
+    "id": "cincinnatilibrary",
+    "city": "Cincinnati",
+    "region": "OH",
+    "country": "US",
+    "name": "Cincinnati & Hamilton County Public Library"
+  },
+  {
+    "id": "ccclib",
+    "city": "Contra Costa County",
+    "region": "CA",
+    "country": "US",
+    "name": "Contra Costa County Library"
+  },
+  {
+    "id": "coqlibrary",
+    "city": "Coquitlam",
+    "region": "BC",
+    "country": "CA",
+    "name": "Coquitlam Public Library"
+  },
+  {
+    "id": "dcl",
+    "city": "Douglas County",
+    "region": "CO",
+    "country": "US",
+    "name": "Douglas County Libraries"
+  },
+  {
+    "id": "epl",
+    "city": "Edmonton",
+    "region": "AB",
+    "country": "CA",
+    "name": "Edmonton Public Library"
+  },
+  {
+    "id": "fvrl",
+    "city": "Abbotsford",
+    "region": "BC",
+    "country": "CA",
+    "name": "Fraser Valley Regional Library"
+  },
+  {
+    "id": "halifax",
+    "city": "Halifax",
+    "region": "NS",
+    "country": "CA",
+    "name": "Halifax Public Libraries"
+  },
+  {
+    "id": "hpl",
+    "city": "Hamilton",
+    "region": "ON",
+    "country": "CA",
+    "name": "Hamilton Public Library"
+  },
+  {
+    "id": "hclib",
+    "city": "Minneapolis",
+    "region": "MN",
+    "country": "US",
+    "name": "Hennepin County Library"
+  },
+  {
+    "id": "jeffcolibrary",
+    "city": "Jefferson County",
+    "region": "CO",
+    "country": "US",
+    "name": "Jefferson County Public Library"
+  },
+  {
+    "id": "jocolibrary",
+    "city": "Johnson County",
+    "region": "KS",
+    "country": "US",
+    "name": "Johnson County Library"
+  },
+  {
+    "id": "kcls",
+    "city": "King County",
+    "region": "WA",
+    "country": "US",
+    "name": "King County Library System"
+  },
+  {
+    "id": "markham",
+    "city": "Markham",
+    "region": "ON",
+    "country": "CA",
+    "name": "Markham Public Library"
+  },
+  {
+    "id": "mymcpl",
+    "city": "Kansas City",
+    "region": "MO",
+    "country": "US",
+    "name": "Mid-Continent Public Library"
+  },
+  {
+    "id": "mississauga",
+    "city": "Mississauga",
+    "region": "ON",
+    "country": "CA",
+    "name": "Mississauga Library"
+  },
+  {
+    "id": "mcpl",
+    "city": "Atlanta",
+    "region": "MI",
+    "country": "US",
+    "name": "Montmorency County Public Library"
+  },
+  {
+    "id": "more",
+    "city": "Eau Claire",
+    "region": "WI",
+    "country": "US",
+    "name": "MORE Libraries"
+  },
+  {
+    "id": "multcolib",
+    "city": "Portland",
+    "region": "OR",
+    "country": "US",
+    "name": "Multnomah County Library"
+  },
+  {
+    "id": "oaklandlibrary",
+    "city": "Oakland",
+    "region": "CA",
+    "country": "US",
+    "name": "Oakland Public Library"
+  },
+  {
+    "id": "opl",
+    "city": "Oakville",
+    "region": "ON",
+    "country": "CA",
+    "name": "Oakville Public Library"
+  },
+  {
+    "id": "ottawa",
+    "city": "Ottawa",
+    "region": "ON",
+    "country": "CA",
+    "name": "Ottawa Public Library"
+  },
+  {
+    "id": "palatinelibrary",
+    "city": "Palatine",
+    "region": "IL",
+    "country": "US",
+    "name": "Palatine Library District"
+  },
+  {
+    "id": "pickering",
+    "city": "Pickering",
+    "region": "ON",
+    "country": "CA",
+    "name": "Pickering Public Library"
+  },
+  {
+    "id": "pima",
+    "city": "Tucson",
+    "region": "AZ",
+    "country": "US",
+    "name": "Pima County Public Library"
+  },
+  {
+    "id": "princetonlibrary",
+    "city": "Princeton",
+    "region": "NJ",
+    "country": "US",
+    "name": "Princeton Public Library"
+  },
+  {
+    "id": "rdpl",
+    "city": "Red Deer",
+    "region": "AB",
+    "country": "CA",
+    "name": "Red Deer Public Library"
+  },
+  {
+    "id": "yourlibrary",
+    "city": "Richmond",
+    "region": "BC",
+    "country": "CA",
+    "name": "Richmond Public Library"
+  },
+  {
+    "id": "sppl",
+    "city": "Saint Paul",
+    "region": "MN",
+    "country": "US",
+    "name": "Saint Paul Public Library"
+  },
+  {
+    "id": "sfpl",
+    "city": "San Francisco",
+    "region": "CA",
+    "country": "US",
+    "name": "San Francisco Public Library"
+  },
+  {
+    "id": "sjpl",
+    "city": "San Jose",
+    "region": "CA",
+    "country": "US",
+    "name": "San José Public Library"
+  },
+  {
+    "id": "smcl",
+    "city": "San Mateo County",
+    "region": "CA",
+    "country": "US",
+    "name": "San Mateo County Libraries"
+  },
+  {
+    "id": "sccl",
+    "city": "Santa Clara County",
+    "region": "CA",
+    "country": "US",
+    "name": "Santa Clara County Library"
+  },
+  {
+    "id": "smpl",
+    "city": "Santa Monica",
+    "region": "CA",
+    "country": "US",
+    "name": "Santa Monica Public Library"
+  },
+  {
+    "id": "skokielibrary",
+    "city": "Skokie",
+    "region": "IL",
+    "country": "US",
+    "name": "Skokie Public Library"
+  },
+  {
+    "id": "shpl",
+    "city": "St. Helena",
+    "region": "CA",
+    "country": "US",
+    "name": "St Helena Public Library"
+  },
+  {
+    "id": "sapl",
+    "city": "St. Albert",
+    "region": "AB",
+    "country": "CA",
+    "name": "St. Albert Public Library"
+  },
+  {
+    "id": "spl",
+    "city": "Stratford",
+    "region": "ON",
+    "country": "CA",
+    "name": "Stratford Public Library"
+  },
+  {
+    "id": "surrey",
+    "city": "Surrey",
+    "region": "BC",
+    "country": "CA",
+    "name": "Surrey Libraries"
+  },
+  {
+    "id": "kclibrary",
+    "city": "Kansas City",
+    "region": "MO",
+    "country": "US",
+    "name": "The Kansas City Public Library"
+  },
+  {
+    "id": "seattle",
+    "city": "Seattle",
+    "region": "WA",
+    "country": "US",
+    "name": "The Seattle Public Library"
+  },
+  {
+    "id": "tscpl",
+    "city": "Topeka",
+    "region": "KS",
+    "country": "US",
+    "name": "Topeka & Shawnee County Public Library"
+  },
+  {
+    "id": "tpl",
+    "city": "Toronto",
+    "region": "ON",
+    "country": "CA",
+    "name": "Toronto Public Library"
+  },
+  {
+    "id": "vpl",
+    "city": "Vancouver",
+    "region": "BC",
+    "country": "CA",
+    "name": "Vancouver Public Library"
+  },
+  {
+    "id": "wccls",
+    "city": "Washington County",
+    "region": "OR",
+    "country": "US",
+    "name": "Washington County Cooperative Library Services"
+  },
+  {
+    "id": "westvanlibrary",
+    "city": "West Vancouver",
+    "region": "BC",
+    "country": "CA",
+    "name": "West Vancouver Memorial Library"
+  }
+]

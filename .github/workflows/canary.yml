@@ -1,0 +1,77 @@
+# The canary: every day, run the live health check against real library sites.
+# If a site changed and a tool broke, this job fails and opens (or updates) an
+# issue with the exact broken fields, plus a TinyFish Agent diagnosis job id.
+name: Canary
+on:
+  schedule:
+    - cron: "17 13 * * *"
+  workflow_dispatch:
+    inputs:
+      library:
+        description: Library id to check
+        default: tpl
+permissions:
+  contents: read
+  issues: write
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        library: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.library)) || fromJSON('["tpl","vpl","chipublib"]') }}
+    env:
+      TINYFISH_API_KEY: ${{ secrets.TINYFISH_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip when no TinyFish key is configured
+        id: key
+        run: |
+          if [ -z "$TINYFISH_API_KEY" ]; then
+            echo "::warning::TINYFISH_API_KEY secret is not set, skipping the canary."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.key.outputs.present == 'true'
+        run: npm ci && npm run build
+      - name: Run health check
+        if: steps.key.outputs.present == 'true'
+        id: health
+        run: |
+          set +e
+          node dist/index.js health --library "${{ matrix.library }}" --deep > report.txt 2>&1
+          code=$?
+          cat report.txt
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Open or update an issue when a tool is broken
+        if: steps.key.outputs.present == 'true' && steps.health.outputs.code != '0'
+        run: |
+          title="Canary: ${{ matrix.library }} is broken"
+          {
+            echo "The daily canary found that Stacks no longer works against \`${{ matrix.library }}\`."
+            echo
+            echo '```'
+            cat report.txt
+            echo '```'
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            echo "To reproduce: \`npx stacks-mcp health --library ${{ matrix.library }} --deep\`"
+            echo "Where to fix: \`src/adapters/bibliocommons/contracts.ts\` and \`parse.ts\`. See docs/ARCHITECTURE.md."
+          } > body.md
+          existing=$(gh issue list --state open --label site-broke --search "in:title \"$title\"" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file body.md
+          else
+            gh label create site-broke --color B60205 --description "A library website changed and a tool broke" 2>/dev/null || true
+            gh issue create --title "$title" --label site-broke --body-file body.md
+          fi
+          exit 1

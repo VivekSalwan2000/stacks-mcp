@@ -1,0 +1,22 @@
+name: A tool broke (SITE_CHANGED)
+description: A Stacks tool returned SITE_CHANGED or wrong data for a library.
+labels: [site-broke]
+body:
+  - type: input
+    id: library
+    attributes: { label: Library id, placeholder: tpl }
+    validations: { required: true }
+  - type: input
+    id: tool
+    attributes: { label: Tool, placeholder: check_availability }
+    validations: { required: true }
+  - type: textarea
+    id: report
+    attributes:
+      label: Health check output
+      description: "Paste the output of `npx stacks-mcp health --library <id> --deep`."
+      render: text
+    validations: { required: true }
+  - type: textarea
+    id: error
+    attributes: { label: The error the tool returned, render: json }

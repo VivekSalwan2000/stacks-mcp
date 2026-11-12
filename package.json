@@ -1,0 +1,66 @@
+{
+  "name": "stacks-mcp",
+  "version": "0.1.0",
+  "description": "Give your AI agent a library card. An MCP server that turns public-library websites (BiblioCommons) into typed agent tools, powered by TinyFish.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "stacks-mcp": "dist/index.js"
+  },
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "start:http": "node dist/index.js --http",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "health": "tsx src/index.ts health",
+    "e2e": "tsx scripts/e2e.ts",
+    "refresh-registry": "tsx scripts/refresh-registry.ts",
+    "prepublishOnly": "npm run build && npm test",
+    "docs": "tsx scripts/gen-tools-doc.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "tinyfish",
+    "library",
+    "bibliocommons",
+    "public-library",
+    "ai-agents",
+    "claude",
+    "chatgpt"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@tiny-fish/sdk": "^0.11.0",
+    "playwright-core": "^1.48.2",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VivekSalwan2000/stacks-mcp.git"
+  },
+  "homepage": "https://github.com/VivekSalwan2000/stacks-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/VivekSalwan2000/stacks-mcp/issues"
+  },
+  "author": "Vivek Salwan",
+  "mcpName": "io.github.viveksalwan2000/stacks-mcp"
+}

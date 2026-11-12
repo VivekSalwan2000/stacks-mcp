@@ -1,0 +1,542 @@
+[
+  {
+    "id": "tpl",
+    "city": "Toronto",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "vpl",
+    "city": "Vancouver",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "chipublib",
+    "city": "Chicago",
+    "region": "IL",
+    "country": "US"
+  },
+  {
+    "id": "nypl",
+    "city": "New York",
+    "region": "NY",
+    "country": "US"
+  },
+  {
+    "id": "seattle",
+    "city": "Seattle",
+    "region": "WA",
+    "country": "US"
+  },
+  {
+    "id": "sfpl",
+    "city": "San Francisco",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "ottawa",
+    "city": "Ottawa",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "calgary",
+    "city": "Calgary",
+    "region": "AB",
+    "country": "CA"
+  },
+  {
+    "id": "epl",
+    "city": "Edmonton",
+    "region": "AB",
+    "country": "CA"
+  },
+  {
+    "id": "bpl",
+    "city": "Boston",
+    "region": "MA",
+    "country": "US"
+  },
+  {
+    "id": "kcls",
+    "city": "King County",
+    "region": "WA",
+    "country": "US"
+  },
+  {
+    "id": "hclib",
+    "city": "Minneapolis",
+    "region": "MN",
+    "country": "US"
+  },
+  {
+    "id": "cincinnatilibrary",
+    "city": "Cincinnati",
+    "region": "OH",
+    "country": "US"
+  },
+  {
+    "id": "wccls",
+    "city": "Washington County",
+    "region": "OR",
+    "country": "US"
+  },
+  {
+    "id": "multcolib",
+    "city": "Portland",
+    "region": "OR",
+    "country": "US"
+  },
+  {
+    "id": "pima",
+    "city": "Tucson",
+    "region": "AZ",
+    "country": "US"
+  },
+  {
+    "id": "sjpl",
+    "city": "San Jose",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "austin",
+    "city": "Austin",
+    "region": "TX",
+    "country": "US"
+  },
+  {
+    "id": "aclibrary",
+    "city": "Alameda County",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "oaklandlibrary",
+    "city": "Oakland",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "smcl",
+    "city": "San Mateo County",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "sccl",
+    "city": "Santa Clara County",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "saclibrary",
+    "city": "Sacramento",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "jocolibrary",
+    "city": "Johnson County",
+    "region": "KS",
+    "country": "US"
+  },
+  {
+    "id": "kclibrary",
+    "city": "Kansas City",
+    "region": "MO",
+    "country": "US"
+  },
+  {
+    "id": "mymcpl",
+    "city": "Kansas City",
+    "region": "MO",
+    "country": "US"
+  },
+  {
+    "id": "arapahoelibraries",
+    "city": "Arapahoe County",
+    "region": "CO",
+    "country": "US"
+  },
+  {
+    "id": "jeffcolibrary",
+    "city": "Jefferson County",
+    "region": "CO",
+    "country": "US"
+  },
+  {
+    "id": "anythink",
+    "city": "Adams County",
+    "region": "CO",
+    "country": "US"
+  },
+  {
+    "id": "ppld",
+    "city": "Colorado Springs",
+    "region": "CO",
+    "country": "US"
+  },
+  {
+    "id": "burnaby",
+    "city": "Burnaby",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "surrey",
+    "city": "Surrey",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "westvanlibrary",
+    "city": "West Vancouver",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "nvdpl",
+    "city": "North Vancouver",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "coqlibrary",
+    "city": "Coquitlam",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "yourlibrary",
+    "city": "Richmond",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "gvpl",
+    "city": "Victoria",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "halifax",
+    "city": "Halifax",
+    "region": "NS",
+    "country": "CA"
+  },
+  {
+    "id": "wpl",
+    "city": "Winnipeg",
+    "region": "MB",
+    "country": "CA"
+  },
+  {
+    "id": "markham",
+    "city": "Markham",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "hpl",
+    "city": "Hamilton",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "kpl",
+    "city": "Kitchener",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "bpl-ca",
+    "city": "Burlington",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "opl",
+    "city": "Oakville",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "christchurch",
+    "city": "Christchurch",
+    "region": null,
+    "country": "NZ"
+  },
+  {
+    "id": "aucklandlibraries",
+    "city": "Auckland",
+    "region": null,
+    "country": "NZ"
+  },
+  {
+    "id": "yprl",
+    "city": "Melbourne",
+    "region": "VIC",
+    "country": "AU"
+  },
+  {
+    "id": "cmlibrary",
+    "city": "Charlotte",
+    "region": "NC",
+    "country": "US"
+  },
+  {
+    "id": "tulsalibrary",
+    "city": "Tulsa",
+    "region": "OK",
+    "country": "US"
+  },
+  {
+    "id": "metrolibrary",
+    "city": "Oklahoma City",
+    "region": "OK",
+    "country": "US"
+  },
+  {
+    "id": "slcpl",
+    "city": "Salt Lake City",
+    "region": "UT",
+    "country": "US"
+  },
+  {
+    "id": "slcolibrary",
+    "city": "Salt Lake County",
+    "region": "UT",
+    "country": "US"
+  },
+  {
+    "id": "daytonmetrolibrary",
+    "city": "Dayton",
+    "region": "OH",
+    "country": "US"
+  },
+  {
+    "id": "fvrl",
+    "city": "Abbotsford",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "piercecountylibrary",
+    "city": "Pierce County",
+    "region": "WA",
+    "country": "US"
+  },
+  {
+    "id": "tscpl",
+    "city": "Topeka",
+    "region": "KS",
+    "country": "US"
+  },
+  {
+    "id": "omahalibrary",
+    "city": "Omaha",
+    "region": "NE",
+    "country": "US"
+  },
+  {
+    "id": "akronlibrary",
+    "city": "Akron",
+    "region": "OH",
+    "country": "US"
+  },
+  {
+    "id": "ahml",
+    "city": "Arlington Heights",
+    "region": "IL",
+    "country": "US"
+  },
+  {
+    "id": "skokielibrary",
+    "city": "Skokie",
+    "region": "IL",
+    "country": "US"
+  },
+  {
+    "id": "sppl",
+    "city": "Saint Paul",
+    "region": "MN",
+    "country": "US"
+  },
+  {
+    "id": "dakotacounty",
+    "city": "Dakota County",
+    "region": "MN",
+    "country": "US"
+  },
+  {
+    "id": "smpl",
+    "city": "Santa Monica",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "princetonlibrary",
+    "city": "Princeton",
+    "region": "NJ",
+    "country": "US"
+  },
+  {
+    "id": "ccclib",
+    "city": "Contra Costa County",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "pls",
+    "city": "San Mateo",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "fcpl",
+    "city": "Frederick",
+    "region": "MD",
+    "country": "US"
+  },
+  {
+    "id": "dcl",
+    "city": "Douglas County",
+    "region": "CO",
+    "country": "US"
+  },
+  {
+    "id": "pueblolibrary",
+    "city": "Pueblo",
+    "region": "CO",
+    "country": "US"
+  },
+  {
+    "id": "spl",
+    "city": "Stratford",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "lapl",
+    "city": "Los Angeles",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "deschuteslibrary",
+    "city": "Bend",
+    "region": "OR",
+    "country": "US"
+  },
+  {
+    "id": "whatcom",
+    "city": "Whatcom County",
+    "region": "WA",
+    "country": "US"
+  },
+  {
+    "id": "snoisle",
+    "city": "Snohomish County",
+    "region": "WA",
+    "country": "US"
+  },
+  {
+    "id": "greatriver",
+    "city": "St. Cloud",
+    "region": "MN",
+    "country": "US"
+  },
+  {
+    "id": "stpaul",
+    "city": "Saint Paul",
+    "region": "MN",
+    "country": "US"
+  },
+  {
+    "id": "portland",
+    "city": "Portland",
+    "region": "ME",
+    "country": "US"
+  },
+  {
+    "id": "palatinelibrary",
+    "city": "Palatine",
+    "region": "IL",
+    "country": "US"
+  },
+  {
+    "id": "epl-ca",
+    "city": "Edmonton",
+    "region": "AB",
+    "country": "CA"
+  },
+  {
+    "id": "sapl",
+    "city": "St. Albert",
+    "region": "AB",
+    "country": "CA"
+  },
+  {
+    "id": "mcpl",
+    "city": "Atlanta",
+    "region": "MI",
+    "country": "US"
+  },
+  {
+    "id": "nwpl",
+    "city": "New Westminster",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "pocolibrary",
+    "city": "Port Coquitlam",
+    "region": "BC",
+    "country": "CA"
+  },
+  {
+    "id": "shpl",
+    "city": "St. Helena",
+    "region": "CA",
+    "country": "US"
+  },
+  {
+    "id": "rdpl",
+    "city": "Red Deer",
+    "region": "AB",
+    "country": "CA"
+  },
+  {
+    "id": "london",
+    "city": "London",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "whitby",
+    "city": "Whitby",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "pickering",
+    "city": "Pickering",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "mississauga",
+    "city": "Mississauga",
+    "region": "ON",
+    "country": "CA"
+  },
+  {
+    "id": "more",
+    "city": "Eau Claire",
+    "region": "WI",
+    "country": "US"
+  }
+]

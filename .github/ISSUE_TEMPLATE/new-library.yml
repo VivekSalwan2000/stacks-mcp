@@ -1,0 +1,20 @@
+name: Add a library or platform
+description: Ask for a library to be added to the directory, or propose a new platform adapter.
+labels: [enhancement]
+body:
+  - type: input
+    id: library
+    attributes: { label: Library name and city }
+    validations: { required: true }
+  - type: input
+    id: url
+    attributes: { label: Catalogue URL, placeholder: "https://example.bibliocommons.com" }
+    validations: { required: true }
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [BiblioCommons, Aspen Discovery, Koha, Polaris, Evergreen, SirsiDynix Enterprise, Other / not sure]
+  - type: textarea
+    id: notes
+    attributes: { label: Anything else }
