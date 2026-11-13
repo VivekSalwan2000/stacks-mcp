@@ -21,7 +21,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-14B8A6.svg)](CONTRIBUTING.md)
 
-[**▶ Try the interactive explorer**](https://viveksalwan2000.github.io/stacks-mcp/architecture.html) · [**Tools**](#-tools) · [**How it works**](#-how-it-works) · [**Run it**](#-quick-start) · [**Contribute**](#-contributing)
+[**Quick start**](#-quick-start) · [**Tools**](#-tools) · [**Architecture**](#-how-tinyfish-is-used) · [**Reliability**](#-breaks-loudly) · [**Configuration**](#configuration) · [**Contributing**](#-contributing)
 
 <br>
 
@@ -144,19 +144,23 @@ Public libraries don't offer developers an API. Their catalogues, branch pages a
 
 | Tool | What it does | TinyFish endpoint |
 |---|---|---|
+| **Catalogue and availability** | | |
 | `find_library` | Turns a city or library name into a library id | Fetch, Search |
 | `search_catalog` | Searches books, eBooks, audiobooks and DVDs | Browser |
 | `get_title` | Full details for one title, and its other formats | Browser |
 | `check_availability` | Which branches have a copy on the shelf right now | Browser |
 | `estimate_wait` | How long you'd wait if you placed a hold today | Browser |
+| **Branches and events** | | |
 | `list_branches` | Branches with address, today's hours and distance | Browser |
 | `get_branch` | One branch's weekly hours, closures and services | Browser |
 | `list_events` | Programs, filtered by branch, date, audience and type | Browser |
+| **Policy questions and watches** | | |
 | `ask_library` | Open questions about services and policies | Search, Fetch, Agent |
 | `get_job_result` | Collects the answer from a slow Agent run | Agent |
 | `watch_title` | Watches a title and notices when availability changes | Monitor |
-| `list_watches` | Your watches | Monitor |
+| `list_watches` | Your watches, with live availability on request | Monitor, Browser |
 | `cancel_watch` | Removes a watch, with a preview option | Monitor |
+| **Diagnostics** | | |
 | `health_check` | Proves every tool still works, or says what broke | Fetch, Browser, Agent |
 
 Twelve of the fourteen only read. The two watch tools create and remove a watch, and are labelled that way for the client. Every input and output field is listed in [docs/TOOLS.md](docs/TOOLS.md).
@@ -255,14 +259,30 @@ The [interactive explorer](https://viveksalwan2000.github.io/stacks-mcp/architec
 Every network call Stacks makes goes through TinyFish. Nothing is canned, and there is no other scraping code. All five endpoints have a real job, chosen for what each is good at.
 
 ```mermaid
-flowchart TD
-  N{"What does the<br/>tool need?"}
-  N -- "the text of a page" --> FE["📄 <b>Fetch</b><br/>fastest"]
-  N -- "data the page builds<br/>with JavaScript" --> BR["🖥 <b>Browser</b><br/>2 to 5 seconds"]
-  N -- "to find the right page" --> SE["🔎 <b>Search</b>"]
-  N -- "judgment across<br/>several pages" --> AG["🧭 <b>Agent</b><br/>1 to 3 minutes"]
-  N -- "to notice a change<br/>over time" --> MO["🔔 <b>Monitor</b><br/>on a schedule"]
+flowchart LR
+  call(["🤖 MCP tool call"]) --> zod["Input checked<br/>against the tool's schema"]
+  zod --> cache{"Cache:<br/>read recently?"}
+  cache -- "hit" --> out(["✅ Typed answer<br/>and its source"])
+  cache -- "miss" --> pace["Pacing<br/>750 ms per host · 4 pages at once"]
+
+  subgraph TF["🐟 TinyFish, through web.ts"]
+    direction TB
+    BR["🖥 <b>Browser</b><br/>catalogue, titles, branches, events"]
+    FE["📄 <b>Fetch</b><br/>is the catalogue live? page landmarks"]
+    SE["🔎 <b>Search</b><br/>find a library, find the right page"]
+    AG["🧭 <b>Agent</b><br/>open questions, fallback, diagnosis"]
+    MO["🔔 <b>Monitor</b><br/>watches"]
+  end
+
+  pace --> BR
+  zod --> FE & SE & AG & MO
+  BR --> contract{"contracts.ts:<br/>do the fields match?"}
+  contract -- "yes" --> parse["Parser<br/>page data → public shapes"] --> out
+  contract -- "no" --> err["🚨 SITE_CHANGED<br/>with broken_fields"]
+  FE & SE & AG & MO --> out
 ```
+
+Page reads through Browser are the ones that are cached, paced and checked against the contract. The other four endpoints return to the tool that called them. The [interactive walkthrough](https://viveksalwan2000.github.io/stacks-mcp/architecture.html) plays this route step by step for ten real questions.
 
 | Endpoint | Why this one | What it does in Stacks |
 |---|---|---|
@@ -298,9 +318,10 @@ flowchart TD
   Z -- yes --> OK["✅ Typed data and its source"]
 ```
 
-Four things make this work:
+Five things make this work:
 
-- **A contract for every page.** One file lists exactly which fields Stacks depends on, and every page read is checked against it. If the library renames or removes one, the tool stops and names the field.
+- **A contract for every page.** One file lists exactly which fields Stacks depends on, and every page read is checked against it. If the library renames or removes one, the tool stops with `SITE_CHANGED` and lists the fields in `broken_fields`. Every tool fails this way; none returns less data.
+- **A fallback where it helps most.** On `SITE_CHANGED`, `search_catalog` and `check_availability` also start a best-effort Agent run and put its `fallback_job_id` in the error. The other tools fail without one.
 - **A health check anyone can run.** It runs known-good queries against a library and reports each tool as passing or failing. The agent can run it too, in the middle of a conversation.
 - **A daily canary.** GitHub Actions runs that health check against three libraries every day and opens an issue when one fails.
 - **Tests that fake a site change.** Recorded pages are deliberately damaged, and each tool has to fail with the right error. These run on every push.
@@ -563,6 +584,11 @@ TINYFISH_API_KEY=your-key STACKS_HTTP_TOKEN=choose-a-secret npx -y stacks-mcp --
 
 Your MCP address is `https://<your-host>/mcp/<your-secret>`. In ChatGPT, go to Settings → Connectors → Advanced → Developer mode and add a connector with that address and no authentication. The included [`render.yaml`](render.yaml) and [`Dockerfile`](Dockerfile) deploy it on Render's free tier.
 
+Two rules apply when the server is reachable from outside this machine, as it is in Docker (`HOST=0.0.0.0`):
+
+- **A server key needs a token.** With `TINYFISH_API_KEY` set and no `STACKS_HTTP_TOKEN`, Stacks refuses to start. Otherwise anyone who found the address could spend your TinyFish credits.
+- **`GET /healthz` is the health probe.** It answers `200` with the status, version and uptime, needs no token and makes no TinyFish call. `render.yaml` already points at it.
+
 </details>
 
 <details>
@@ -581,8 +607,10 @@ npm run e2e                 # calls every core tool against three live libraries
 
 </details>
 
+<a id="configuration"></a>
+
 <details>
-<summary><b>⚙️ Settings</b></summary>
+<summary><b>⚙️ Configuration</b></summary>
 
 <br>
 
@@ -599,11 +627,23 @@ npm run e2e                 # calls every core tool against three live libraries
 
 In HTTP mode, a caller can send their own TinyFish key and use their own credits. Otherwise the server uses its key, but only for callers who present the token. With no token set, the server listens on this machine only and turns away requests from other websites, so it is safe to run locally and can't be reached from outside.
 
-Stacks refuses to start in HTTP mode if it would serve its own key on a public address with no token; the Docker image listens on all addresses, so set `STACKS_HTTP_TOKEN` there. `GET /healthz` answers `200` with the version and uptime, needs no token and makes no TinyFish call, so a host can use it as a health probe.
+If `HOST` is anything other than this machine (the Docker image uses `0.0.0.0`) and the server has its own key, `STACKS_HTTP_TOKEN` is required: Stacks refuses to start without it. `GET /healthz` answers `200` with the status, version and uptime, needs no token and makes no TinyFish call.
 
 Each tool call writes one JSON line to stderr: the tool, how long it took, whether the answer came from the cache, and the error code if it failed. It never contains what was searched for, results or keys.
 
 </details>
+
+### Prompts to try
+
+Each of these makes the agent chain several tools. Swap in your own city and titles.
+
+| Try | Tools it uses |
+|---|---|
+| *I'm in Toronto. Is Project Hail Mary on the shelf anywhere right now, and how late is that branch open today?* | `find_library` → `search_catalog` → `check_availability` → `get_branch` |
+| *How long would I wait for Dune at Vancouver Public Library? Compare the print book, the eBook and the audiobook.* | `search_catalog` → `get_title` → `estimate_wait` |
+| *What's on for kids at Chicago Public Library this Saturday that doesn't need registration?* | `list_events`, filtered by date and audience |
+| *I don't live in Toronto. Can I still get a library card, and what does it cost?* | `ask_library` → `get_job_result` |
+| *Every copy of Atomic Habits is out at Toronto Public Library. Watch it for me and tell me what you set up.* | `search_catalog` → `watch_title` → `list_watches` |
 
 <p align="right"><a href="#stacks"><sub>↑ Back to top</sub></a></p>
 
