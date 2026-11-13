@@ -3,7 +3,7 @@ import type { Context } from "./core/context.js";
 import { register } from "./core/tool.js";
 import { TOOLS } from "./tools/index.js";
 
-export const VERSION = "0.1.1";
+export const VERSION = "0.1.2";
 
 const INSTRUCTIONS = `Stacks gives you live access to public library websites (catalogue, branches, events) through typed tools. Data is read from the library's website at call time by TinyFish; it is not from memory or a search index.
 

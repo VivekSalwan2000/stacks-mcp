@@ -8,3 +8,5 @@ dist/
 coverage/
 CONTEXT.md
 demo/
+.mcpb-build/
+*.mcpb

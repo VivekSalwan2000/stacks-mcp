@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
+
+- Stacks can be installed in Claude Desktop as a one-click bundle (`stacks.mcpb`, built with `npm run bundle`), with its own icon and a settings box for the TinyFish key.
+- An interactive system explorer at https://viveksalwan2000.github.io/stacks-mcp/architecture.html, and a shorter, more visual README.
 
 - `cancel_watch` takes `dry_run`: it reports which watch would be cancelled and deletes nothing. Its output now also names the watch (`library`, `title_id`, `title`).
 - The tool contract is recorded in `test/__snapshots__/tool-schemas.json`; a test fails when any tool's name, description, input or output changes.

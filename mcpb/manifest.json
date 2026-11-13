@@ -1,0 +1,36 @@
+{
+  "manifest_version": "0.2",
+  "name": "stacks-mcp",
+  "display_name": "Stacks: public library tools",
+  "version": "0.0.0",
+  "description": "Give your AI agent a library card. Live catalogue, shelf status, branches and events from public library websites, powered by TinyFish.",
+  "long_description": "Stacks lets Claude look things up at your public library: which branches have a book on the shelf, how long a hold would take, which branches are open, and what programs are on. It reads the library's website live through TinyFish each time you ask, and works with 54 verified library systems on the BiblioCommons platform, including Toronto, Vancouver, Chicago, San Francisco and Boston.\n\nIt only reads public pages. It never logs in and needs no library card. You need a TinyFish API key, which you can create at https://agent.tinyfish.ai.",
+  "author": { "name": "Vivek Salwan", "url": "https://github.com/VivekSalwan2000" },
+  "repository": { "type": "git", "url": "https://github.com/VivekSalwan2000/stacks-mcp" },
+  "homepage": "https://viveksalwan2000.github.io/stacks-mcp/architecture.html",
+  "documentation": "https://github.com/VivekSalwan2000/stacks-mcp#readme",
+  "support": "https://github.com/VivekSalwan2000/stacks-mcp/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": { "TINYFISH_API_KEY": "${user_config.tinyfish_api_key}" }
+    }
+  },
+  "user_config": {
+    "tinyfish_api_key": {
+      "type": "string",
+      "title": "TinyFish API key",
+      "description": "Stacks reads library websites through TinyFish. Create a key at https://agent.tinyfish.ai and paste it here. It is stored by Claude and never sent anywhere except TinyFish.",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "tools": [],
+  "keywords": ["library", "books", "public-library", "bibliocommons", "tinyfish", "catalogue", "events"],
+  "license": "MIT",
+  "compatibility": { "platforms": ["darwin", "win32", "linux"], "runtimes": { "node": ">=20.0.0" } }
+}

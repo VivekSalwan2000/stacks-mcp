@@ -488,7 +488,7 @@ If a copy is on the shelf, the wait is zero and the result names the branches. I
 | Database | None | Nothing is stored on disk |
 | Tests | Vitest, 71 tests | Run offline against recorded pages |
 | CI | GitHub Actions, Node 20 and 22 | Lint, type check, tests with a coverage floor, build |
-| Packaging | npm, Docker | `npx` locally, a container for remote hosting |
+| Packaging | npm, a Claude Desktop bundle, Docker | `npx` or one click locally, a container for remote hosting |
 
 Testing happens at three levels. Offline tests run on every push with no network and no key. A live end-to-end run calls every core tool against three real libraries. And the daily canary keeps checking after release.
 
@@ -501,7 +501,16 @@ Testing happens at three levels. Offline tests run on every push with no network
 You need two things: Node 20 or newer, and a [TinyFish API key](https://agent.tinyfish.ai). Then pick your app below.
 
 <details>
-<summary><b>Claude Desktop</b></summary>
+<summary><b>Claude Desktop, one click</b></summary>
+
+<br>
+
+Download `stacks.mcpb` from the [latest release](https://github.com/VivekSalwan2000/stacks-mcp/releases/latest) and double-click it. Claude Desktop shows the Stacks icon, asks for your TinyFish key in a settings box, and installs it. There is no config file to edit.
+
+</details>
+
+<details>
+<summary><b>Claude Desktop, by hand</b></summary>
 
 <br>
 
@@ -537,7 +546,7 @@ claude mcp add stacks -e TINYFISH_API_KEY=your-key -- npx -y stacks-mcp
 
 <br>
 
-Use the same command, arguments and key as the Claude Desktop block above.
+Use the same command, arguments and key as the hand-edited Claude Desktop block above.
 
 </details>
 

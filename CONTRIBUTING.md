@@ -22,6 +22,7 @@ cp .env.example .env    # add your TinyFish key; .env is git-ignored
 | `npm run e2e -- --all` | Also runs the Agent tool and a Monitor round trip | yes |
 | `npm run health -- --library tpl` | The live health check | yes |
 | `npm run docs` | Regenerates `docs/TOOLS.md` from the tool definitions | no |
+| `npm run bundle` | Builds `stacks.mcpb`, the one-click bundle for Claude Desktop | no |
 
 Never commit a real API key. `.env.example` must stay blank.
 
