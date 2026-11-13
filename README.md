@@ -26,11 +26,11 @@
 <br>
 
 <a href="https://viveksalwan2000.github.io/stacks-mcp/architecture.html">
-  <img src="docs/media/explorer-preview.gif" width="900" alt="The Stacks system explorer: one tool call lights up its path through the tool layer, the library adapter and TinyFish to the library's website, while a side panel shows the question, the tool call and the typed result">
+  <img src="docs/media/explorer-preview.gif" width="900" alt="The Stacks system explorer stepping through ten real questions: each tool call lights up its path through Stacks and TinyFish to the library's website, while a side panel shows the question, the tool call and the typed result.">
 </a>
 
 **[🧭 Open the interactive explorer](https://viveksalwan2000.github.io/stacks-mcp/architecture.html)**<br>
-<sub>Watch one question travel through Stacks, step by step. No install and no key needed: it replays recorded results.</sub>
+<sub>Ten real questions that between them use all 14 tools, played step by step. No install and no key needed: it replays recorded results.</sub>
 
 </div>
 
