@@ -20,7 +20,7 @@ export function cleanText(input: string | null | undefined, maxLength = 1200): s
     .replace(/<li[^>]*>/gi, "- ")
     .replace(/<[^>]+>/g, "");
   s = decodeEntities(s)
-    .replace(/[ \t ]+/g, " ")
+    .replace(/[ \t\u00a0]+/g, " ")
     .replace(/ *\n */g, "\n")
     .replace(/\n{2,}/g, "\n")
     .trim();
@@ -92,8 +92,7 @@ export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; l
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 
-const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
-export type Day = (typeof DAYS)[number];
+export type Day = "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
 
 /** The current date, weekday and minutes-past-midnight in a given IANA time zone. */
 export function localNow(timeZone: string | null, now = new Date()): { date: string; day: Day; minutes: number } {

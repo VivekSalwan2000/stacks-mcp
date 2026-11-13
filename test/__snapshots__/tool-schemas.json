@@ -1,0 +1,3493 @@
+[
+  {
+    "name": "find_library",
+    "title": "Find a library",
+    "description": "Find the public library system for a city or library name and get its library_id. Call this first: every other tool needs the library_id. Covers library systems whose catalogue runs on BiblioCommons (e.g. Toronto, Vancouver, Chicago, Seattle, San Francisco, Boston, Ottawa, Calgary).",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 2,
+          "description": "A city, region or library name, e.g. \"Toronto\", \"Seattle Public Library\", \"King County\"."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "library_id": {
+                "type": "string",
+                "description": "Stacks id for the library system, e.g. 'tpl'. Pass this as `library` to every other tool."
+              },
+              "name": {
+                "type": "string"
+              },
+              "catalog_url": {
+                "type": "string"
+              },
+              "city": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "region": {
+                "description": "State or province.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "country": {
+                "description": "ISO 3166-1 alpha-2 country code.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "verified": {
+                "type": "boolean",
+                "description": "True if the catalogue was confirmed reachable (from the built-in directory or a live check)."
+              }
+            },
+            "required": [
+              "library_id",
+              "name",
+              "catalog_url",
+              "city",
+              "region",
+              "country",
+              "verified"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Best match first. Empty if no supported library was found."
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "matches",
+        "note",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "search_catalog",
+    "title": "Search the catalogue",
+    "description": "Search a library's catalogue for books, eBooks, audiobooks, DVDs and more. Returns typed titles with live availability counts and hold queues. Use the title_id of a result with check_availability to see which branches have a copy on the shelf.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "What to search for: a title, author, subject or keywords. At most 200 characters."
+        },
+        "search_type": {
+          "default": "keyword",
+          "type": "string",
+          "enum": [
+            "keyword",
+            "title",
+            "author",
+            "subject",
+            "series"
+          ]
+        },
+        "format": {
+          "description": "Only this format: book, ebook, audiobook, eaudiobook, large_print, graphic_novel, picture_book, dvd, bluray, music_cd, magazine (or a platform format code such as BK).",
+          "type": "string"
+        },
+        "available_at_branch": {
+          "description": "Only titles with a copy available right now at this branch (name or code from list_branches).",
+          "type": "string"
+        },
+        "page": {
+          "default": 1,
+          "description": "Results page. A page holds 20 titles at most libraries and 10 at some; `pages` gives the count.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991,
+          "description": "Total matching titles across all pages."
+        },
+        "page": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "did_you_mean": {
+          "description": "The site's spelling suggestion, if it had one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title_id": {
+                "type": "string",
+                "description": "Stable id for this edition. Pass to get_title, check_availability, estimate_wait, watch_title."
+              },
+              "title": {
+                "type": "string"
+              },
+              "subtitle": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "authors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "format": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "Platform format code, e.g. BK, EBOOK, DVD."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "Human-readable format, e.g. Book, eBook, DVD."
+                  }
+                },
+                "required": [
+                  "code",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              "year": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "language": {
+                "description": "ISO 639-2 language code, e.g. eng.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "call_number": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "series": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "audience": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "rating": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "average_out_of_5": {
+                        "type": "number"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "average_out_of_5",
+                      "count"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "availability": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "library_use_only",
+                      "all_copies_in_use",
+                      "on_order",
+                      "unavailable",
+                      "unknown"
+                    ],
+                    "description": "available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."
+                  },
+                  "total_copies": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Null when the site does not report a count."
+                  },
+                  "available_copies": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Copies the site counts as in. Null when the site does not report a count."
+                  },
+                  "holds": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "People currently waiting for this title."
+                  },
+                  "on_order_copies": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "total_copies",
+                  "available_copies",
+                  "holds",
+                  "on_order_copies"
+                ],
+                "additionalProperties": false
+              },
+              "other_formats": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title_id": {
+                      "type": "string"
+                    },
+                    "format": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Platform format code, e.g. BK, EBOOK, DVD."
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Human-readable format, e.g. Book, eBook, DVD."
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "label"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "year": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "availability": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "available",
+                            "library_use_only",
+                            "all_copies_in_use",
+                            "on_order",
+                            "unavailable",
+                            "unknown"
+                          ],
+                          "description": "available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."
+                        },
+                        "total_copies": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Null when the site does not report a count."
+                        },
+                        "available_copies": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Copies the site counts as in. Null when the site does not report a count."
+                        },
+                        "holds": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "People currently waiting for this title."
+                        },
+                        "on_order_copies": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "total_copies",
+                        "available_copies",
+                        "holds",
+                        "on_order_copies"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "title_id",
+                    "format",
+                    "year",
+                    "availability"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "The same work in other formats or editions."
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title_id",
+              "title",
+              "subtitle",
+              "authors",
+              "format",
+              "year",
+              "language",
+              "call_number",
+              "series",
+              "audience",
+              "rating",
+              "availability",
+              "other_formats",
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "library",
+        "query",
+        "total",
+        "page",
+        "pages",
+        "did_you_mean",
+        "results",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_title",
+    "title": "Get title details",
+    "description": "Full details for one title: description, contributors, publisher, ISBNs, subjects, series, and every other format the library holds it in.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "title_id": {
+          "type": "string",
+          "description": "A title_id from search_catalog, e.g. \"S234C3970025\"."
+        }
+      },
+      "required": [
+        "title_id"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "title": {
+          "type": "object",
+          "properties": {
+            "title_id": {
+              "type": "string",
+              "description": "Stable id for this edition. Pass to get_title, check_availability, estimate_wait, watch_title."
+            },
+            "title": {
+              "type": "string"
+            },
+            "subtitle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "authors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "format": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "description": "Platform format code, e.g. BK, EBOOK, DVD."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Human-readable format, e.g. Book, eBook, DVD."
+                }
+              },
+              "required": [
+                "code",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "year": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "language": {
+              "description": "ISO 639-2 language code, e.g. eng.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "call_number": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "series": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "audience": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rating": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "average_out_of_5": {
+                      "type": "number"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "average_out_of_5",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "availability": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "available",
+                    "library_use_only",
+                    "all_copies_in_use",
+                    "on_order",
+                    "unavailable",
+                    "unknown"
+                  ],
+                  "description": "available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."
+                },
+                "total_copies": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Null when the site does not report a count."
+                },
+                "available_copies": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Copies the site counts as in. Null when the site does not report a count."
+                },
+                "holds": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "People currently waiting for this title."
+                },
+                "on_order_copies": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "status",
+                "total_copies",
+                "available_copies",
+                "holds",
+                "on_order_copies"
+              ],
+              "additionalProperties": false
+            },
+            "other_formats": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title_id": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "description": "Platform format code, e.g. BK, EBOOK, DVD."
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "Human-readable format, e.g. Book, eBook, DVD."
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "label"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "year": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "availability": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "available",
+                          "library_use_only",
+                          "all_copies_in_use",
+                          "on_order",
+                          "unavailable",
+                          "unknown"
+                        ],
+                        "description": "available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."
+                      },
+                      "total_copies": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Null when the site does not report a count."
+                      },
+                      "available_copies": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Copies the site counts as in. Null when the site does not report a count."
+                      },
+                      "holds": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "People currently waiting for this title."
+                      },
+                      "on_order_copies": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "total_copies",
+                      "available_copies",
+                      "holds",
+                      "on_order_copies"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "title_id",
+                  "format",
+                  "year",
+                  "availability"
+                ],
+                "additionalProperties": false
+              },
+              "description": "The same work in other formats or editions."
+            },
+            "url": {
+              "type": "string"
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contributors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "roles"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "publisher": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "physical_description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "isbns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "subjects": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "genres": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "title_id",
+            "title",
+            "subtitle",
+            "authors",
+            "format",
+            "year",
+            "language",
+            "call_number",
+            "series",
+            "audience",
+            "rating",
+            "availability",
+            "other_formats",
+            "url",
+            "description",
+            "contributors",
+            "publisher",
+            "physical_description",
+            "isbns",
+            "subjects",
+            "genres"
+          ],
+          "additionalProperties": false
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "library",
+        "title",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "check_availability",
+    "title": "Check availability by branch",
+    "description": "Live, copy-level availability for one title: which branches have it on the shelf right now, call numbers, and due dates for checked-out copies. Branches with a copy on the shelf are listed first.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "title_id": {
+          "type": "string",
+          "description": "A title_id from search_catalog, e.g. \"S234C3970025\"."
+        },
+        "branch": {
+          "description": "Only this branch (name or code).",
+          "type": "string"
+        },
+        "on_shelf_only": {
+          "default": false,
+          "description": "Only branches where a copy is on the shelf right now.",
+          "type": "boolean"
+        },
+        "limit": {
+          "default": 15,
+          "description": "Maximum number of branches to return.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 150
+        }
+      },
+      "required": [
+        "title_id"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "title_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "format": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Platform format code, e.g. BK, EBOOK, DVD."
+            },
+            "label": {
+              "type": "string",
+              "description": "Human-readable format, e.g. Book, eBook, DVD."
+            }
+          },
+          "required": [
+            "code",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "available",
+                "library_use_only",
+                "all_copies_in_use",
+                "on_order",
+                "unavailable",
+                "unknown"
+              ],
+              "description": "available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."
+            },
+            "total_copies": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Null when the site does not report a count."
+            },
+            "available_copies": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Copies the site counts as in. Null when the site does not report a count."
+            },
+            "holds": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "People currently waiting for this title."
+            },
+            "on_order_copies": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "total_copies",
+            "available_copies",
+            "holds",
+            "on_order_copies"
+          ],
+          "additionalProperties": false
+        },
+        "branches_holding": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991,
+          "description": "Branches that own at least one copy."
+        },
+        "branches_on_shelf": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991,
+          "description": "Branches with a copy on the shelf right now."
+        },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "branch_code": {
+                "type": "string"
+              },
+              "branch_name": {
+                "type": "string"
+              },
+              "copies_total": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "copies_on_shelf": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Copies you could walk in and borrow right now."
+              },
+              "next_due_date": {
+                "description": "Earliest due date among checked-out copies at this branch.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "copies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "on_shelf",
+                        "checked_out",
+                        "in_transit",
+                        "on_hold_shelf",
+                        "library_use_only",
+                        "on_order",
+                        "unavailable"
+                      ]
+                    },
+                    "status_label": {
+                      "type": "string",
+                      "description": "The library's own wording for the status."
+                    },
+                    "collection": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "call_number": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "due_date": {
+                      "description": "YYYY-MM-DD, when a checked-out copy is due back.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "status_label",
+                    "collection",
+                    "call_number",
+                    "due_date"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "branch_code",
+              "branch_name",
+              "copies_total",
+              "copies_on_shelf",
+              "next_due_date",
+              "copies"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True if more branches matched than `limit`."
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "library",
+        "title_id",
+        "title",
+        "format",
+        "summary",
+        "branches_holding",
+        "branches_on_shelf",
+        "branches",
+        "truncated",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "estimate_wait",
+    "title": "Estimate the wait for a title",
+    "description": "Estimate how long you would wait if you placed a hold today, from the live hold queue, copy count and due dates. Also lists other formats of the same work with a shorter queue. This is an estimate computed by Stacks, not a figure published by the library.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "title_id": {
+          "type": "string",
+          "description": "A title_id from search_catalog, e.g. \"S234C3970025\"."
+        },
+        "loan_days": {
+          "default": 21,
+          "description": "The library's loan period in days. 21 is typical for books.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        }
+      },
+      "required": [
+        "title_id"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "title_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "format": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Platform format code, e.g. BK, EBOOK, DVD."
+            },
+            "label": {
+              "type": "string",
+              "description": "Human-readable format, e.g. Book, eBook, DVD."
+            }
+          },
+          "required": [
+            "code",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        "available_now": {
+          "type": "boolean",
+          "description": "True if a copy is on a shelf somewhere right now."
+        },
+        "on_shelf_at": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Up to 8 branches with a copy on the shelf."
+        },
+        "holds": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "circulating_copies": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "estimated_wait_days": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "low": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "likely": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "high": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "low",
+                "likely",
+                "high"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null when no estimate is possible (e.g. no circulating copies)."
+        },
+        "basis": {
+          "type": "string",
+          "description": "How the estimate was computed."
+        },
+        "faster_alternatives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title_id": {
+                "type": "string"
+              },
+              "format": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "Platform format code, e.g. BK, EBOOK, DVD."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "Human-readable format, e.g. Book, eBook, DVD."
+                  }
+                },
+                "required": [
+                  "code",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              "holds": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "total_copies": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "available_copies": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "why": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title_id",
+              "format",
+              "holds",
+              "total_copies",
+              "available_copies",
+              "why"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "library",
+        "title_id",
+        "title",
+        "format",
+        "available_now",
+        "on_shelf_at",
+        "holds",
+        "circulating_copies",
+        "estimated_wait_days",
+        "basis",
+        "faster_alternatives",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_branches",
+    "title": "List branches",
+    "description": "List a library system's branches with address, phone, today's hours and whether each is open right now. Pass coordinates to sort by distance. Use get_branch for a branch's full weekly hours and services.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "near_latitude": {
+          "description": "Sort by distance from this point (requires near_longitude).",
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "near_longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "open_now": {
+          "description": "Only branches that are open right now.",
+          "type": "boolean"
+        },
+        "name_contains": {
+          "description": "Only branches whose name contains this text.",
+          "type": "string"
+        },
+        "limit": {
+          "default": 20,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      }
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991,
+          "description": "Branches in the system matching the filters."
+        },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "branch_code": {
+                "type": "string",
+                "description": "Pass to get_branch, list_events(branch) or search_catalog(available_at_branch)."
+              },
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "postal_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "latitude": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "longitude": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "distance_km": {
+                "description": "Distance from the coordinates you passed, if any.",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "open_now": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "today": {
+                "type": "object",
+                "properties": {
+                  "open": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "close": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "note": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "open",
+                  "close",
+                  "note"
+                ],
+                "additionalProperties": false,
+                "description": "Today's hours in the branch's local time."
+              }
+            },
+            "required": [
+              "branch_code",
+              "name",
+              "address",
+              "city",
+              "postal_code",
+              "phone",
+              "latitude",
+              "longitude",
+              "distance_km",
+              "open_now",
+              "today"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "library",
+        "total",
+        "branches",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_branch",
+    "title": "Get branch details",
+    "description": "Everything about one branch: weekly hours, whether it is open now, upcoming holiday closures, services and facilities (meeting rooms, printing, makerspaces), accessibility, parking and directions.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Branch name or code, e.g. \"Yorkville\" or \"YO\"."
+        }
+      },
+      "required": [
+        "branch"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "object",
+          "properties": {
+            "branch_code": {
+              "type": "string",
+              "description": "Pass to get_branch, list_events(branch) or search_catalog(available_at_branch)."
+            },
+            "name": {
+              "type": "string"
+            },
+            "address": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "city": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "postal_code": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "phone": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "latitude": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "longitude": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "distance_km": {
+              "description": "Distance from the coordinates you passed, if any.",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "open_now": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "today": {
+              "type": "object",
+              "properties": {
+                "open": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "close": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "open",
+                "close",
+                "note"
+              ],
+              "additionalProperties": false,
+              "description": "Today's hours in the branch's local time."
+            },
+            "timezone": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "hours": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "day": {
+                    "type": "string",
+                    "enum": [
+                      "monday",
+                      "tuesday",
+                      "wednesday",
+                      "thursday",
+                      "friday",
+                      "saturday",
+                      "sunday"
+                    ]
+                  },
+                  "open": {
+                    "description": "HH:MM, 24-hour local time. Null when closed.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "close": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "day",
+                  "open",
+                  "close"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "upcoming_closures": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "type": "string"
+                  },
+                  "end_date": {
+                    "type": "string"
+                  },
+                  "open": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "close": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "start_date",
+                  "end_date",
+                  "open",
+                  "close"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "services": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Facilities and services at this branch, e.g. Meeting Room, 3D Printer."
+            },
+            "highlights": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "accessibility": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "parking": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "directions": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "branch_code",
+            "name",
+            "address",
+            "city",
+            "postal_code",
+            "phone",
+            "latitude",
+            "longitude",
+            "distance_km",
+            "open_now",
+            "today",
+            "timezone",
+            "hours",
+            "upcoming_closures",
+            "services",
+            "highlights",
+            "accessibility",
+            "parking",
+            "directions",
+            "url"
+          ],
+          "additionalProperties": false
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "library",
+        "branch",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_events",
+    "title": "List events and programs",
+    "description": "Find events and programs at a library: storytimes, book clubs, classes, author talks. Filter by branch, date range, audience (e.g. kids, teens, adults) and type. Returns typed events with local start and end times and whether registration is required.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "branch": {
+          "description": "Only events at this branch (name or code).",
+          "type": "string"
+        },
+        "start_date": {
+          "description": "First day to include (YYYY-MM-DD).",
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end_date": {
+          "description": "Last day to include (YYYY-MM-DD).",
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "audience": {
+          "description": "Audience name, matched loosely, e.g. \"school age\", \"teens\", \"adults\". Valid values are returned in available_filters.",
+          "type": "string"
+        },
+        "event_type": {
+          "description": "Event type, matched loosely, e.g. \"book club\", \"crafts\". Valid values are returned in available_filters.",
+          "type": "string"
+        },
+        "query": {
+          "description": "Keywords to search event titles and descriptions.",
+          "type": "string"
+        },
+        "page": {
+          "default": 1,
+          "description": "Results page, up to 20 events per page.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "limit": {
+          "default": 20,
+          "description": "Return at most this many events from the page. Use a small number when you only need the next few.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        }
+      }
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "page": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "event_id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "start": {
+                "type": "string",
+                "description": "Local start: YYYY-MM-DDTHH:MM, or YYYY-MM-DD for all-day events."
+              },
+              "end": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "all_day": {
+                "type": "boolean"
+              },
+              "branch_code": {
+                "description": "Null for online events.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "branch_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "room": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_online": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "audiences": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "types": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "languages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "registration_required": {
+                "type": "boolean",
+                "description": "True if you must sign up (with the library or an outside organiser) to attend."
+              },
+              "registration_closed": {
+                "type": "boolean",
+                "description": "True if sign-up is required and is closed or its window has ended."
+              },
+              "is_full": {
+                "type": "boolean"
+              },
+              "is_cancelled": {
+                "type": "boolean"
+              },
+              "is_recurring": {
+                "type": "boolean"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "event_id",
+              "title",
+              "start",
+              "end",
+              "all_day",
+              "branch_code",
+              "branch_name",
+              "room",
+              "is_online",
+              "description",
+              "audiences",
+              "types",
+              "languages",
+              "registration_required",
+              "registration_closed",
+              "is_full",
+              "is_cancelled",
+              "is_recurring",
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "available_filters": {
+          "type": "object",
+          "properties": {
+            "audiences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "event_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "audiences",
+            "event_types"
+          ],
+          "additionalProperties": false,
+          "description": "Valid values for the audience and event_type inputs at this library."
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "library",
+        "total",
+        "page",
+        "pages",
+        "events",
+        "available_filters",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "ask_library",
+    "title": "Ask about a library's services",
+    "description": "Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Much slower than the other tools: a full answer usually takes 1 to 3 minutes. This call waits about 50 seconds; if the Agent is still working it returns status 'running' with a job_id, and you call get_job_result with that id until it is done.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 400,
+          "description": "The question, in plain language. Name the branch if it is about one branch."
+        }
+      },
+      "required": [
+        "question"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "running",
+            "failed"
+          ]
+        },
+        "job_id": {
+          "description": "Set while status is 'running'. Pass it to get_job_result.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "found": {
+          "description": "False if the website does not state the answer.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "source_urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pages_consulted": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "url",
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Pages found by search and read before the Agent started."
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "library",
+        "status",
+        "job_id",
+        "answer",
+        "found",
+        "source_urls",
+        "pages_consulted",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_job_result",
+    "title": "Get the result of a running job",
+    "description": "Fetch the result of a slow TinyFish Agent run that another Stacks tool started (a job_id from ask_library, a fallback_job_id from an error, or a diagnosis_job_id from health_check). If status is still 'running', wait about 15 seconds and call again.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "description": "The job id exactly as returned by another tool."
+        }
+      },
+      "required": [
+        "job_id"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "search",
+            "availability",
+            "diagnosis"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "running",
+            "failed"
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The Agent's structured result once completed. For kind 'ask': { answer, found, source_urls }."
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "agent_steps": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "job_id",
+        "kind",
+        "status",
+        "result",
+        "error",
+        "agent_steps",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "watch_title",
+    "title": "Watch a title for availability",
+    "description": "Create a standing watch on a title using TinyFish Monitor. TinyFish re-reads the title's page on a schedule and detects when its availability changes (for example a copy comes back on the shelf). Notifications go to the webhook you pass, or to the alerts set up in the TinyFish dashboard. Use list_watches to see watches and their current availability.",
+    "writes": true,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "title_id": {
+          "type": "string",
+          "description": "A title_id from search_catalog."
+        },
+        "check_every": {
+          "default": "6_hours",
+          "description": "How often TinyFish re-checks the page.",
+          "type": "string",
+          "enum": [
+            "hour",
+            "6_hours",
+            "day"
+          ]
+        },
+        "webhook_url": {
+          "description": "Optional public HTTPS endpoint TinyFish calls when the page changes.",
+          "type": "string",
+          "format": "starts_with",
+          "pattern": "^https:\\/\\/.*"
+        }
+      },
+      "required": [
+        "title_id"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "watch": {
+          "type": "object",
+          "properties": {
+            "watch_id": {
+              "type": "string"
+            },
+            "library": {
+              "type": "string"
+            },
+            "title_id": {
+              "type": "string"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "description": "active, paused, failed or creating."
+            },
+            "schedule_cron": {
+              "type": "string"
+            },
+            "notifies": {
+              "type": "string",
+              "description": "Where change notifications go."
+            },
+            "last_error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "created_at": {
+              "type": "string"
+            },
+            "current": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "available",
+                        "library_use_only",
+                        "all_copies_in_use",
+                        "on_order",
+                        "unavailable",
+                        "unknown"
+                      ],
+                      "description": "available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."
+                    },
+                    "total_copies": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Null when the site does not report a count."
+                    },
+                    "available_copies": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Copies the site counts as in. Null when the site does not report a count."
+                    },
+                    "holds": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "People currently waiting for this title."
+                    },
+                    "on_order_copies": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "total_copies",
+                    "available_copies",
+                    "holds",
+                    "on_order_copies"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Live availability, when check_now was requested."
+            }
+          },
+          "required": [
+            "watch_id",
+            "library",
+            "title_id",
+            "title",
+            "status",
+            "schedule_cron",
+            "notifies",
+            "last_error",
+            "created_at",
+            "current"
+          ],
+          "additionalProperties": false
+        },
+        "availability_at_creation": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "available",
+                "library_use_only",
+                "all_copies_in_use",
+                "on_order",
+                "unavailable",
+                "unknown"
+              ],
+              "description": "available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."
+            },
+            "total_copies": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Null when the site does not report a count."
+            },
+            "available_copies": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Copies the site counts as in. Null when the site does not report a count."
+            },
+            "holds": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "People currently waiting for this title."
+            },
+            "on_order_copies": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "total_copies",
+            "available_copies",
+            "holds",
+            "on_order_copies"
+          ],
+          "additionalProperties": false
+        },
+        "already_existed": {
+          "type": "boolean",
+          "description": "True if this title was already being watched; the existing watch is returned and nothing new is created."
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "watch",
+        "availability_at_creation",
+        "already_existed",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_watches",
+    "title": "List watches",
+    "description": "List the title watches created with watch_title. Set check_now to also read each title's live availability, so you can tell the user whether a copy is available yet.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "check_now": {
+          "default": false,
+          "description": "Also fetch live availability for each watched title (up to 5).",
+          "type": "boolean"
+        }
+      }
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "watches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "watch_id": {
+                "type": "string"
+              },
+              "library": {
+                "type": "string"
+              },
+              "title_id": {
+                "type": "string"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "description": "active, paused, failed or creating."
+              },
+              "schedule_cron": {
+                "type": "string"
+              },
+              "notifies": {
+                "type": "string",
+                "description": "Where change notifications go."
+              },
+              "last_error": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "current": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "available",
+                          "library_use_only",
+                          "all_copies_in_use",
+                          "on_order",
+                          "unavailable",
+                          "unknown"
+                        ],
+                        "description": "available: a copy can be borrowed now. library_use_only: the only copies in are for reading inside the library, not for borrowing."
+                      },
+                      "total_copies": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Null when the site does not report a count."
+                      },
+                      "available_copies": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Copies the site counts as in. Null when the site does not report a count."
+                      },
+                      "holds": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "People currently waiting for this title."
+                      },
+                      "on_order_copies": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "total_copies",
+                      "available_copies",
+                      "holds",
+                      "on_order_copies"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Live availability, when check_now was requested."
+              }
+            },
+            "required": [
+              "watch_id",
+              "library",
+              "title_id",
+              "title",
+              "status",
+              "schedule_cron",
+              "notifies",
+              "last_error",
+              "created_at",
+              "current"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "watches",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "cancel_watch",
+    "title": "Cancel a watch",
+    "description": "Stop and permanently delete a watch created with watch_title. TinyFish stops re-checking the title and sends no more notifications. Only watches made by Stacks can be cancelled; get the watch_id from list_watches. Set dry_run to see which watch would be cancelled without cancelling it, for example to confirm with the user first.",
+    "writes": true,
+    "destructive": true,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "watch_id": {
+          "type": "string",
+          "description": "The watch_id from watch_title or list_watches."
+        },
+        "dry_run": {
+          "default": false,
+          "description": "If true, only report which watch would be cancelled. Nothing is deleted.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "watch_id"
+      ]
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "cancelled": {
+          "type": "boolean",
+          "description": "True if the watch was deleted. Always false on a dry run."
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "watch_id": {
+          "type": "string"
+        },
+        "library": {
+          "type": "string"
+        },
+        "title_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "fetch",
+                  "browser",
+                  "agent",
+                  "monitor"
+                ]
+              },
+              "description": "TinyFish endpoints that produced this result."
+            },
+            "url": {
+              "description": "The page this data was read from.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cached": {
+              "type": "boolean",
+              "description": "True if served from Stacks' short-lived cache."
+            },
+            "retrieved_at": {
+              "type": "string",
+              "description": "ISO timestamp of when the data was read from the site."
+            }
+          },
+          "required": [
+            "engines",
+            "url",
+            "cached",
+            "retrieved_at"
+          ],
+          "additionalProperties": false,
+          "description": "Provenance of the data."
+        }
+      },
+      "required": [
+        "cancelled",
+        "dry_run",
+        "watch_id",
+        "library",
+        "title_id",
+        "title",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "health_check",
+    "title": "Check that the tools still work",
+    "description": "Run live checks against a library's website to confirm every Stacks tool still works, and report exactly what broke if the site changed. Checks page landmarks (TinyFish Fetch) and the data contract of each tool using known-good queries (TinyFish Browser). Set deep to also start a TinyFish Agent that inspects a failing page and explains what changed. Takes about 20 to 40 seconds. Run this when a tool returns SITE_CHANGED.",
+    "writes": false,
+    "destructive": false,
+    "input": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "library": {
+          "description": "Library system id such as \"tpl\" (Toronto), \"vpl\" (Vancouver), \"chipublib\" (Chicago). Get it from find_library. A city or library name also works.",
+          "type": "string"
+        },
+        "deep": {
+          "default": false,
+          "description": "If a check fails, start an Agent run to diagnose the failing page (result via get_job_result).",
+          "type": "boolean"
+        }
+      }
+    },
+    "output": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "healthy": {
+          "type": "boolean",
+          "description": "False if any check failed."
+        },
+        "library": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "platform_version": {
+          "description": "Version of the library platform seen on the site now.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verified_platform_version": {
+          "type": "string",
+          "description": "Platform version these tools were last verified against."
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "layer": {
+                "type": "string",
+                "enum": [
+                  "landmark",
+                  "contract",
+                  "platform"
+                ]
+              },
+              "engine": {
+                "type": "string",
+                "enum": [
+                  "fetch",
+                  "browser"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail",
+                  "warn",
+                  "skipped"
+                ]
+              },
+              "ms": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "detail": {
+                "type": "string"
+              },
+              "error_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "broken_fields": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "layer",
+              "engine",
+              "status",
+              "ms",
+              "detail",
+              "error_code",
+              "broken_fields",
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "diagnosis_job_id": {
+          "description": "Pass to get_job_result for the Agent's diagnosis of the failing page.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "diagnosis_error": {
+          "description": "Why the Agent diagnosis could not be started, if it could not.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tinyfish_calls": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "TinyFish calls this check made, by endpoint."
+        },
+        "checked_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "healthy",
+        "library",
+        "summary",
+        "platform_version",
+        "verified_platform_version",
+        "checks",
+        "diagnosis_job_id",
+        "diagnosis_error",
+        "tinyfish_calls",
+        "checked_at"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

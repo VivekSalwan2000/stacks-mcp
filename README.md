@@ -300,7 +300,9 @@ Contributions are welcome, and the project is laid out to make them small:
 - **Fix a break**: when the canary opens an issue, the fix is usually a few lines in `contracts.ts` and `parse.ts`, plus a new fixture.
 - **Add a platform** (Aspen Discovery, Koha, Polaris, Evergreen): implement `LibraryAdapter`. The tools, schemas, health check and tests are reused. See [docs/ADDING_AN_ADAPTER.md](docs/ADDING_AN_ADAPTER.md).
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Report how a library behaves**: tried Stacks on your own library? File a [library compatibility report](https://github.com/VivekSalwan2000/stacks-mcp/issues/new?template=library-report.yml), whether it worked or not.
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## Roadmap
 

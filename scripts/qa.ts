@@ -14,7 +14,6 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 const argv = process.argv.slice(2);
 const opt = (name: string) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : undefined);
 const groups = new Set((opt("--group") ?? "protocol,validation,functional,errors,invariants,cache,concurrency").split(","));
