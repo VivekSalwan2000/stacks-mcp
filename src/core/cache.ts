@@ -66,3 +66,28 @@ export class HostLimiter {
     if (at > now) await new Promise((r) => setTimeout(r, at - now));
   }
 }
+
+/** At most `max` tasks run at once; the rest wait their turn in order. */
+export class Semaphore {
+  private active = 0;
+  private waiting: Array<() => void> = [];
+  constructor(readonly max: number) {}
+
+  /** How many tasks are waiting for a slot right now. */
+  get queued() {
+    return this.waiting.length;
+  }
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.max) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    else this.active++;
+    try {
+      return await task();
+    } finally {
+      // Hand the slot straight to the next waiter, so a newcomer cannot jump the queue.
+      const next = this.waiting.shift();
+      if (next) next();
+      else this.active--;
+    }
+  }
+}

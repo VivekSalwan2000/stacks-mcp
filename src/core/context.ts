@@ -4,6 +4,7 @@ import { registryGet, registrySearch } from "../adapters/bibliocommons/registry.
 import { TtlCache } from "./cache.js";
 import type { Config } from "./config.js";
 import { StacksError } from "./errors.js";
+import type { CallLog } from "./tool.js";
 import { TinyFishWeb, type Web } from "./web.js";
 
 /** Everything a tool needs. One per TinyFish API key. */
@@ -12,6 +13,8 @@ export interface Context {
   web: Web;
   cache: TtlCache;
   adapter: LibraryAdapter;
+  /** Where tool-call log lines go. Defaults to stderr; tests replace it. */
+  log?: (entry: CallLog) => void;
 }
 
 export function createContext(config: Config, web: Web = new TinyFishWeb(config)): Context {

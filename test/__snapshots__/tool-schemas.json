@@ -2427,7 +2427,7 @@
   {
     "name": "ask_library",
     "title": "Ask about a library's services",
-    "description": "Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Much slower than the other tools: a full answer usually takes 1 to 3 minutes. This call waits about 50 seconds; if the Agent is still working it returns status 'running' with a job_id, and you call get_job_result with that id until it is done.",
+    "description": "Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Much slower than the other tools: a full answer usually takes 1 to 3 minutes. This call waits about 40 seconds; if the Agent is still working it returns status 'running' with a job_id, and you call get_job_result with that id until it is done.",
     "writes": false,
     "destructive": false,
     "input": {
@@ -2864,6 +2864,30 @@
                 }
               ],
               "description": "Live availability, when check_now was requested."
+            },
+            "check_error": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Set when check_now was requested and the live read failed, e.g. SITE_CHANGED. `current` is then null because it is unknown, not because nothing is available."
             }
           },
           "required": [
@@ -2876,7 +2900,8 @@
             "notifies",
             "last_error",
             "created_at",
-            "current"
+            "current",
+            "check_error"
           ],
           "additionalProperties": false
         },
@@ -3156,6 +3181,30 @@
                   }
                 ],
                 "description": "Live availability, when check_now was requested."
+              },
+              "check_error": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "message"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Set when check_now was requested and the live read failed, e.g. SITE_CHANGED. `current` is then null because it is unknown, not because nothing is available."
               }
             },
             "required": [
@@ -3168,7 +3217,8 @@
               "notifies",
               "last_error",
               "created_at",
-              "current"
+              "current",
+              "check_error"
             ],
             "additionalProperties": false
           }

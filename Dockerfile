@@ -10,6 +10,7 @@ FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
 # Inside a container the server must listen on all interfaces to be reachable.
+# Because of that, Stacks will not start with TINYFISH_API_KEY set unless STACKS_HTTP_TOKEN is set too.
 ENV HOST=0.0.0.0
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules

@@ -43,16 +43,45 @@ export function register(server: McpServer, def: AnyTool, getContext: () => Cont
       annotations: { readOnlyHint: !def.writes, destructiveHint: !!def.destructive, idempotentHint: !def.writes, openWorldHint: true },
     },
     async (args: Record<string, unknown>) => {
+      const started = Date.now();
+      let ctx: Context | undefined;
       try {
-        const out = await def.handler(args, getContext());
+        ctx = getContext();
+        const out = await def.handler(args, ctx);
+        logCall(ctx, { tool: def.name, ms: Date.now() - started, ok: true, cached: (out as { source?: Source }).source?.cached ?? null });
         return { structuredContent: out as Record<string, unknown>, content: [{ type: "text" as const, text: JSON.stringify(out) }] };
       } catch (err) {
         const e = toStacksError(err);
         e.details = { tool: def.name, ...e.details };
+        logCall(ctx, { tool: def.name, ms: Date.now() - started, ok: false, cached: null, error: e.code });
         return { isError: true, content: [{ type: "text" as const, text: JSON.stringify(e.toJSON()) }] };
       }
     },
   );
+}
+
+export interface CallLog {
+  tool: string;
+  ms: number;
+  ok: boolean;
+  /** True if the answer came from the cache, false if it was read live, null if the tool has no single source. */
+  cached: boolean | null;
+  /** The error code, when the call failed. */
+  error?: string;
+}
+
+/**
+ * One JSON line per tool call, on stderr. stdout carries the MCP protocol in stdio mode and
+ * must stay clean. The line never holds arguments, results, messages or keys: what a person
+ * searched for at a library is their business.
+ */
+function logCall(ctx: Context | undefined, entry: CallLog) {
+  if (!ctx?.config.log) return;
+  (ctx.log ?? defaultLog)(entry);
+}
+
+function defaultLog(entry: CallLog) {
+  console.error(JSON.stringify({ t: new Date().toISOString(), event: "tool_call", ...entry }));
 }
 
 /** Provenance for data read just now (not from cache). */

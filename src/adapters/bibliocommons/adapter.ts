@@ -156,7 +156,15 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
         throw err;
       });
       const state = contract(RawSearchState, read.state, { contract: "search page", url });
-      return this.stamp(parseSearch(state, this.catalogUrl(id)), url);
+      const result = parseSearch(state, this.catalogUrl(id));
+      // The site answers a page past the end with its first page. Say so instead of passing that off as the page asked for.
+      if (params.page > 1 && result.page !== params.page) {
+        throw new StacksError("INVALID_INPUT", `There is no page ${params.page}: this search has ${result.pages} page${result.pages === 1 ? "" : "s"} (${result.total} results).`, {
+          hint: `Ask for a page from 1 to ${Math.max(1, result.pages)}.`,
+          details: { pages: result.pages, total: result.total },
+        });
+      }
+      return this.stamp(result, url);
     });
   }
 
@@ -217,7 +225,7 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
     }
     const hit = branches.find((b) => b.branch_code.toLowerCase() === input.toLowerCase()) ?? matchLabel(input, branches, (b) => [b.name]);
     if (!hit) {
-      throw new StacksError("INVALID_INPUT", `No branch matching "${input}" at this library.`, {
+      throw new StacksError("NOT_FOUND", `No branch matching "${input}" at this library.`, {
         hint: "Call list_branches to see valid branch names and codes.",
         details: { examples: branches.slice(0, 8).map((b) => `${b.name} (${b.branch_code})`) },
       });
@@ -255,7 +263,7 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
     const pick = <T extends { id: string; name: string }>(what: string, input: string, options: T[], extra: (o: T) => string[] = () => []) => {
       const hit = options.find((o) => o.id.toLowerCase() === input.toLowerCase()) ?? matchLabel(input, options, (o) => [o.name, ...extra(o)]);
       if (!hit) {
-        throw new StacksError("INVALID_INPUT", `No ${what} matching "${input}" at this library.`, {
+        throw new StacksError(what === "branch" ? "NOT_FOUND" : "INVALID_INPUT", `No ${what} matching "${input}" at this library.`, {
           hint: `Valid ${what} values are listed in details.options.`,
           details: { options: options.map((o) => o.name).sort().slice(0, 60) },
         });

@@ -13,7 +13,7 @@
  */
 import { TinyFish } from "@tiny-fish/sdk";
 import { chromium, type Browser, type Page } from "playwright-core";
-import { HostLimiter } from "./cache.js";
+import { HostLimiter, Semaphore } from "./cache.js";
 import type { Config } from "./config.js";
 import { StacksError, toStacksError } from "./errors.js";
 
@@ -102,6 +102,12 @@ const BLOCKED_RESOURCES = new Set(["image", "font", "media", "stylesheet"]);
 const IDLE_CLOSE_MS = 90_000;
 /** A remote session is replaced after this long, before the service retires it under us. */
 const MAX_SESSION_AGE_MS = 4 * 60_000;
+/**
+ * Pages open at once in one remote browser. An agent can fire a dozen tool calls together;
+ * measured, twelve pages in one session all finish but each takes five times as long, which
+ * edges every one of them towards the deadline. Beyond this number, calls wait their turn.
+ */
+export const MAX_CONCURRENT_PAGES = 4;
 /** Nothing a page read does may take longer than this: a dead session must fail, not hang. */
 const PAGE_DEADLINE_MS = 80_000;
 
@@ -116,6 +122,7 @@ class BrowserPool {
   private idle?: NodeJS.Timeout;
   private openedAt = 0;
   private inFlight = 0;
+  private slots = new Semaphore(MAX_CONCURRENT_PAGES);
 
   constructor(
     private client: TinyFish,
@@ -154,7 +161,13 @@ class BrowserPool {
     void b?.close().catch(() => {});
   }
 
-  async withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
+  /** Run `fn` on a fresh page. The deadline starts when the call gets its slot, not while it queues. */
+  withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
+    if (this.idle) clearTimeout(this.idle);
+    return this.slots.run(() => this.runPage(fn));
+  }
+
+  private async runPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
     if (this.idle) clearTimeout(this.idle);
     let attempt = 0;
     for (;;) {
@@ -196,7 +209,7 @@ class BrowserPool {
         void (page as Page | undefined)?.close().catch(() => {});
         if (this.idle) clearTimeout(this.idle);
         this.idle = setTimeout(() => {
-          if (this.inFlight === 0) void this.close();
+          if (this.inFlight === 0 && this.slots.queued === 0) void this.close();
         }, IDLE_CLOSE_MS);
         this.idle.unref();
       }

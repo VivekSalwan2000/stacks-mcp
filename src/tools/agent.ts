@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveLibrary } from "../core/context.js";
 import { agentSchema, jobId, jobState, parseJobId, JOB_KINDS } from "../core/jobs.js";
-import { norm } from "../core/text.js";
+import { hostOf, norm } from "../core/text.js";
 import { defineTool, libraryArg, liveSource, sourceField } from "../core/tool.js";
 import { JobStatusSchema } from "../schemas.js";
 
@@ -17,7 +17,7 @@ export const askLibrary = defineTool({
   name: "ask_library",
   title: "Ask about a library's services",
   description:
-    "Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Much slower than the other tools: a full answer usually takes 1 to 3 minutes. This call waits about 50 seconds; if the Agent is still working it returns status 'running' with a job_id, and you call get_job_result with that id until it is done.",
+    "Answer an open-ended question about a library's services, policies or facilities by having a TinyFish Agent browse the library's own website. Use it for things the other tools do not cover, e.g. 'How do I get a card as a non-resident?', 'Can I book a study room at North York Central?', 'What are the overdue fines?'. Much slower than the other tools: a full answer usually takes 1 to 3 minutes. This call waits about 40 seconds; if the Agent is still working it returns status 'running' with a job_id, and you call get_job_result with that id until it is done.",
   input: {
     library: libraryArg,
     question: z.string().min(5).max(400).describe("The question, in plain language. Name the branch if it is about one branch."),
@@ -40,7 +40,12 @@ export const askLibrary = defineTool({
 
     // 1. Search: find pages on the library's own site that look relevant.
     const hits = await ctx.web.search(`${question} ${info.name}`, { include_domains: site });
-    const onSite = hits.filter((h) => new URL(h.url).host.endsWith(site)).slice(0, 3);
+    const onSite = hits
+      .filter((h) => {
+        const host = hostOf(h.url);
+        return host === site || !!host?.endsWith(`.${site}`);
+      })
+      .slice(0, 3);
 
     // 2. Fetch: read them and pick the page that best matches the question as the Agent's starting point.
     const pages = onSite.length ? await ctx.web.fetch(onSite.map((h) => h.url)) : [];
@@ -69,7 +74,13 @@ export const askLibrary = defineTool({
       library,
       status: state.status === "completed" && !parsed?.success ? ("failed" as const) : state.status,
       job_id: state.status === "running" ? jobId("ask", runId) : null,
-      answer: parsed?.success ? parsed.data.answer : state.status === "failed" ? `The Agent run failed: ${state.error}` : null,
+      answer: parsed?.success
+        ? parsed.data.answer
+        : state.status === "failed"
+          ? `The Agent run failed: ${state.error}`
+          : state.status === "completed"
+            ? "The Agent finished but its result was not in the expected shape, so there is no answer. Ask again."
+            : null,
       found: parsed?.success ? parsed.data.found : null,
       source_urls: parsed?.success ? parsed.data.source_urls : [],
       pages_consulted: pages.filter((p) => p.text).map((p) => ({ url: p.final_url ?? p.url, title: p.title })),

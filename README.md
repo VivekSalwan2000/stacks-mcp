@@ -486,7 +486,7 @@ If a copy is on the shelf, the wait is zero and the result names the branches. I
 | Browser control | `playwright-core`, connected remotely | Drives TinyFish's browser. Nothing is installed locally |
 | Schemas | Zod 4 | Checks every input and every page read |
 | Database | None | Nothing is stored on disk |
-| Tests | Vitest, 71 tests | Run offline against recorded pages |
+| Tests | Vitest, 86 tests | Run offline against recorded pages |
 | CI | GitHub Actions, Node 20 and 22 | Lint, type check, tests with a coverage floor, build |
 | Packaging | npm, a Claude Desktop bundle, Docker | `npx` or one click locally, a container for remote hosting |
 
@@ -595,8 +595,13 @@ npm run e2e                 # calls every core tool against three live libraries
 | `STACKS_HTTP_TOKEN` | none | The secret HTTP mode asks for before it uses the server's own key |
 | `PORT` | `3000` | Port for HTTP mode |
 | `HOST` | see below | Address HTTP mode listens on |
+| `STACKS_LOG` | on | Set to `off` to silence the log line written to stderr for each tool call |
 
 In HTTP mode, a caller can send their own TinyFish key and use their own credits. Otherwise the server uses its key, but only for callers who present the token. With no token set, the server listens on this machine only and turns away requests from other websites, so it is safe to run locally and can't be reached from outside.
+
+Stacks refuses to start in HTTP mode if it would serve its own key on a public address with no token; the Docker image listens on all addresses, so set `STACKS_HTTP_TOKEN` there. `GET /healthz` answers `200` with the version and uptime, needs no token and makes no TinyFish call, so a host can use it as a health probe.
+
+Each tool call writes one JSON line to stderr: the tool, how long it took, whether the answer came from the cache, and the error code if it failed. It never contains what was searched for, results or keys.
 
 </details>
 

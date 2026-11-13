@@ -113,3 +113,12 @@ export function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
 }
+
+/** The host of a URL, or null if the text is not a URL. Search results are not always well formed. */
+export function hostOf(url: string): string | null {
+  try {
+    return new URL(url).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}

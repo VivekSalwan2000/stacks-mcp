@@ -79,10 +79,15 @@ export function contract<T extends z.ZodType>(schema: T, data: unknown, ctx: { c
   );
 }
 
+/** A remote browser's CDP address identifies a live session. It must not travel in an error. */
+export function redact(text: string): string {
+  return text.replace(/\bwss?:\/\/[^\s"'<>]+/gi, "[remote browser address]");
+}
+
 export function toStacksError(err: unknown): StacksError {
   if (err instanceof StacksError) return err;
   const e = err as { name?: string; message?: string; status?: number };
-  const msg = e?.message ?? String(err);
+  const msg = redact(e?.message ?? String(err));
   if (e?.name === "RateLimitError" || e?.status === 429) return new StacksError("RATE_LIMITED", `TinyFish rate limit: ${msg}`, { cause: err });
   if (e?.name === "AuthenticationError" || e?.status === 401)
     return new StacksError("CONFIG_ERROR", "TinyFish rejected the API key.", { hint: "Set a valid TINYFISH_API_KEY.", cause: err });

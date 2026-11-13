@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.3
+
+Fixes and guards from a full audit and live test run.
+
+- **HTTP mode refuses to expose the server's TinyFish key.** With a server key and no `STACKS_HTTP_TOKEN`, Stacks now refuses to start on any address other than this machine. Before, the Docker image (which listens on all addresses) would serve the key to anyone who could reach the port. Deployments made from `render.yaml` always had a token and were not affected.
+- **At most 4 pages are open at once in a remote browser.** Further calls wait their turn, in order. A burst of parallel tool calls can no longer push every page towards the 80 second deadline.
+- **One log line per tool call, on stderr**: tool, duration, cache hit or miss, and the error code. No arguments, results or keys. Turn it off with `STACKS_LOG=off`.
+- **`list_watches` no longer hides a failed live check.** With `check_now`, a title that cannot be read has the new `check_error` field (`code`, `message`) instead of a silent `current: null`.
+- **`search_catalog` rejects a page past the last one** with `INVALID_INPUT` and the real page count. Before, it returned page 1 as if it were the page asked for.
+- **An unknown branch is `NOT_FOUND` in every tool.** `search_catalog` and `list_events` used to answer `INVALID_INPUT`.
+- A failed connection to the remote browser no longer puts the session's address in the error.
+- `/healthz` reports `status` and `uptime_seconds`.
+- `PORT` and `STACKS_AGENT_WAIT_MS` are checked at start-up; a value that is not a sensible number is a `CONFIG_ERROR`.
+- `ask_library` says it waits about 40 seconds (the real default), explains itself when the Agent's result is unusable, and ignores a malformed address in a search result instead of failing.
+
 ## 0.1.2
 
 - Stacks can be installed in Claude Desktop as a one-click bundle (`stacks.mcpb`, built with `npm run bundle`), with its own icon and a settings box for the TinyFish key.

@@ -26,6 +26,7 @@ Environment:
   STACKS_DEFAULT_LIBRARY  Library id used when a tool call omits \`library\`
   STACKS_PROXY            off | auto (default) | tinyfish | <country code>
   STACKS_HTTP_TOKEN       Access token required by --http mode when using the server's key
+  STACKS_LOG              off to silence the one-line-per-tool-call log on stderr (default on)
   PORT                    Port for --http mode (default 3000)
   HOST                    Address --http mode listens on. Default: 127.0.0.1 when the server's
                           key is used without a token, otherwise 0.0.0.0
@@ -56,10 +57,11 @@ async function main() {
   }
 
   if (args.includes("--http")) {
-    const port = Number(flagValues(args, "--port")[0] ?? process.env.PORT ?? 3000);
+    const portFlag = flagValues(args, "--port")[0];
+    const env: NodeJS.ProcessEnv = { ...process.env, ...(portFlag ? { PORT: portFlag } : {}) };
     // In HTTP mode the server key is optional: callers may bring their own.
-    const config = process.env.TINYFISH_API_KEY ? loadConfig() : { ...loadConfig({ ...process.env, TINYFISH_API_KEY: "unset" }), apiKey: "" };
-    startHttp({ ...config, port });
+    const config = env.TINYFISH_API_KEY?.trim() ? loadConfig(env) : { ...loadConfig({ ...env, TINYFISH_API_KEY: "unset" }), apiKey: "" };
+    startHttp(config);
     return;
   }
 

@@ -4,7 +4,7 @@ import { TTL } from "../core/cache.js";
 import { resolveLibrary, type Context } from "../core/context.js";
 import { StacksError } from "../core/errors.js";
 import { startJob } from "../core/jobs.js";
-import { matchLabel, norm } from "../core/text.js";
+import { hostOf, matchLabel, norm } from "../core/text.js";
 import { defineTool, libraryArg, sourceField } from "../core/tool.js";
 import {
   AvailabilitySummarySchema,
@@ -86,7 +86,7 @@ export const findLibrary = defineTool({
       const ids = [
         ...new Set(
           hits
-            .map((h) => new URL(h.url).host.match(/^([a-z0-9-]+)\.bibliocommons\.com$/)?.[1])
+            .map((h) => hostOf(h.url)?.match(/^([a-z0-9-]+)\.bibliocommons\.com$/)?.[1])
             .filter((id): id is string => !!id && !["www", "gateway", "help", "partnerportal"].includes(id)),
         ),
       ].slice(0, 4);

@@ -16,6 +16,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Config } from "./core/config.js";
 import { createContext, type Context } from "./core/context.js";
+import { StacksError } from "./core/errors.js";
 import { buildServer, VERSION } from "./server.js";
 
 const MAX_BODY = 1_000_000;
@@ -38,6 +39,11 @@ function isLocalOrigin(origin: string): boolean {
   }
 }
 
+/** True for an address only this machine can reach. */
+function isLoopback(host: string): boolean {
+  return host === "localhost" || host === "::1" || host === "[::1]" || /^127\./.test(host);
+}
+
 function json(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
 }
@@ -57,6 +63,16 @@ export function startHttp(config: Partial<Config> & { port: number }, env: NodeJ
   const token = env.STACKS_HTTP_TOKEN?.trim() || null;
   const shared: Context | null = config.apiKey ? createContext(config as Config) : null;
   const keyed = new Map<string, Context>();
+  const startedAt = Date.now();
+
+  // With the server's key and no token, listen on this machine only. Listening wider than
+  // that would let anyone who can reach the port spend the server's TinyFish credits.
+  const host = env.HOST?.trim() || (shared && !token ? "127.0.0.1" : "0.0.0.0");
+  if (shared && !token && !isLoopback(host)) {
+    throw new StacksError("CONFIG_ERROR", `Refusing to serve the server's TinyFish key on ${host} without an access token.`, {
+      hint: "Set STACKS_HTTP_TOKEN to a long random value (callers then use /mcp/<token> or a Bearer header), or unset TINYFISH_API_KEY so callers bring their own key, or set HOST=127.0.0.1.",
+    });
+  }
 
   const contextFor = (req: IncomingMessage, path: string): Context | { status: number; message: string } => {
     const own = req.headers["x-tinyfish-api-key"];
@@ -65,13 +81,16 @@ export function startHttp(config: Partial<Config> & { port: number }, env: NodeJ
       let ctx = keyed.get(key);
       if (!ctx) {
         if (keyed.size >= MAX_KEYED_CONTEXTS) {
+          // The map is kept in order of last use, so the first entry is the one idle longest.
           const oldest = keyed.keys().next().value as string;
           void keyed.get(oldest)?.web.close();
           keyed.delete(oldest);
         }
         ctx = createContext({ ...(config as Config), apiKey: key });
-        keyed.set(key, ctx);
+      } else {
+        keyed.delete(key);
       }
+      keyed.set(key, ctx);
       return ctx;
     }
     if (!shared) return { status: 401, message: "Send your TinyFish API key in the x-tinyfish-api-key header." };
@@ -92,7 +111,16 @@ export function startHttp(config: Partial<Config> & { port: number }, env: NodeJ
     const path = new URL(req.url ?? "/", "http://localhost").pathname;
     try {
       if (req.method === "GET" && (path === "/" || path === "/healthz")) {
-        return json(res, 200, { name: "stacks-mcp", version: VERSION, mcp_endpoint: "/mcp", transport: "streamable-http", docs: "https://github.com/VivekSalwan2000/stacks-mcp" });
+        // A liveness probe for hosts such as Render. It makes no TinyFish call and reads no page.
+        return json(res, 200, {
+          status: "ok",
+          name: "stacks-mcp",
+          version: VERSION,
+          uptime_seconds: Math.round((Date.now() - startedAt) / 1000),
+          mcp_endpoint: "/mcp",
+          transport: "streamable-http",
+          docs: "https://github.com/VivekSalwan2000/stacks-mcp",
+        });
       }
       if (path !== "/mcp" && !path.startsWith("/mcp/")) return json(res, 404, { error: "Not found. The MCP endpoint is POST /mcp." });
       if (req.method !== "POST") {
@@ -115,8 +143,6 @@ export function startHttp(config: Partial<Config> & { port: number }, env: NodeJ
     }
   });
 
-  // With the server's key and no token, listen on this machine only.
-  const host = env.HOST?.trim() || (shared && !token ? "127.0.0.1" : "0.0.0.0");
   server.listen(config.port, host, () => {
     const mode = shared ? (token ? "server key, token required" : "server key, NO token, this machine only") : "bring-your-own key (x-tinyfish-api-key header)";
     console.error(`stacks-mcp ${VERSION} listening on http://localhost:${config.port}/mcp  [${mode}]`);

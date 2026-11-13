@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveLibrary } from "../core/context.js";
-import { StacksError } from "../core/errors.js";
+import { StacksError, toStacksError } from "../core/errors.js";
 import { defineTool, libraryArg, liveSource, sourceField } from "../core/tool.js";
 import type { Watch } from "../core/web.js";
 import { AvailabilitySummarySchema } from "../schemas.js";
@@ -25,6 +25,10 @@ const WatchSchema = z.object({
   last_error: z.string().nullable(),
   created_at: z.string(),
   current: AvailabilitySummarySchema.nullable().describe("Live availability, when check_now was requested."),
+  check_error: z
+    .object({ code: z.string(), message: z.string() })
+    .nullable()
+    .describe("Set when check_now was requested and the live read failed, e.g. SITE_CHANGED. `current` is then null because it is unknown, not because nothing is available."),
 });
 
 /** A webhook must be reachable from the internet: TinyFish calls it, not this machine. */
@@ -80,6 +84,7 @@ export const watchTitle = defineTool({
       last_error: w.last_error,
       created_at: w.created_at,
       current: data.summary,
+      check_error: null,
     });
     // One watch per title: asking again returns the watch that is already there.
     const existing = (await ctx.web.watchList()).find((w) => {
@@ -114,11 +119,15 @@ export const listWatches = defineTool({
     const watches = await Promise.all(
       mine.map(async ({ w, meta }, i) => {
         let current = null;
+        let check_error: { code: string; message: string } | null = null;
         if (check_now && i < 5) {
-          current = await ctx.adapter
-            .getTitle(meta!.library, meta!.title_id)
-            .then((r) => r.data.summary)
-            .catch(() => null);
+          try {
+            current = (await ctx.adapter.getTitle(meta!.library, meta!.title_id)).data.summary;
+          } catch (err) {
+            // One unreadable title must not hide the other watches, but it must not look like "no copies" either.
+            const e = toStacksError(err);
+            check_error = { code: e.code, message: e.message };
+          }
         }
         return {
           watch_id: w.id,
@@ -131,6 +140,7 @@ export const listWatches = defineTool({
           last_error: w.last_error,
           created_at: w.created_at,
           current,
+          check_error,
         };
       }),
     );

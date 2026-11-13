@@ -25,7 +25,7 @@ structuredContent  +  source { engines, url, cached, retrieved_at }
 
 - `web.ts` is the only file that talks to the network. It wraps the five TinyFish endpoints behind a `Web` interface, keeps one warm remote browser, retries through a proxy when a site blocks the direct route, and counts calls per endpoint.
 - `errors.ts` defines `StacksError`, the error codes, and `contract()`, which validates scraped data and names the broken fields.
-- `cache.ts` is a TTL cache with in-flight de-duplication, plus a per-host rate limiter.
+- `cache.ts` is a TTL cache with in-flight de-duplication, plus a per-host rate limiter. It also holds the semaphore that caps a remote browser at 4 open pages; further page reads wait their turn.
 - `jobs.ts` turns slow Agent runs into job ids. A job id is `<kind>.<tinyfish run id>`, so there is no job store: jobs survive restarts and work across instances.
 - `tool.ts` registers tools with the MCP SDK and converts thrown errors into structured error results.
 
