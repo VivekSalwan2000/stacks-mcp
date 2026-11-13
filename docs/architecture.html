@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stacks · System Explorer</title>
+<meta name="description" content="Interactive tour of how Stacks answers a library question: an MCP tool call travels through typed tools, a library adapter and TinyFish to a public library's website and back.">
+<style>
+  :root {
+    --bg: #f5f6f3; --panel: #ffffff; --ink: #10231f; --muted: #5b6b66; --line: #dde3df; --line-strong: #c1cbc6;
+    --brand: #0f766e; --brand-soft: #dff3ef; --client: #1b1b1f; --client-soft: #ececef;
+    --tf: #e8650f; --tf-soft: #fdeee2; --mem: #7a5ac8; --mem-soft: #efe9fb; --site: #a16207; --site-soft: #fbf1d8;
+    --active: #e8650f; --bubble-in: #e9ebe8; --bubble-out: #0f766e; --bad: #c93434; --bad-soft: #fbe9e9; --good-soft: #e6f4ea;
+    --radius: 14px; --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1513; --panel: #151e1b; --ink: #e8efec; --muted: #98a8a2; --line: #25302c; --line-strong: #35433e;
+      --brand: #2bb5a5; --brand-soft: #16302b; --client: #e9e9ee; --client-soft: #22252b; --tf-soft: #34230f; --mem-soft: #251d36;
+      --site-soft: #332a12; --bubble-in: #232b28; --bad-soft: #3a1c1c; --good-soft: #163022;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.5; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 20px 48px; }
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  header svg { flex: none; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 4px 0 20px; max-width: 780px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .tag { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); }
+  .tag b { color: var(--ink); font-weight: 600; }
+  .stories { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .stories button { text-align: left; padding: 9px 14px; line-height: 1.3; }
+  .stories button small { display: block; color: var(--muted); font-size: 12px; }
+  .stories button.on { background: var(--brand-soft); border-color: var(--brand); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+  .map { padding: 12px; }
+  .map svg { width: 100%; height: auto; display: block; }
+  .controls { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  button { font: inherit; font-size: 14px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); border-radius: 10px; padding: 7px 14px; cursor: pointer; }
+  button:hover { border-color: var(--brand); }
+  button:focus-visible, .node:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  button.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .dots { display: flex; gap: 5px; margin-left: auto; flex-wrap: wrap; }
+  .dot { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; font-size: 11px; padding: 0; color: var(--muted); }
+  .dot.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .story { padding: 18px 20px; margin-top: 20px; }
+  .story .kicker { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--tf); font-weight: 600; }
+  .story h2 { margin: 4px 0 6px; font-size: 20px; }
+  .story p { margin: 0; color: var(--muted); }
+  .story ul { margin: 10px 0 0; padding-left: 18px; color: var(--ink); }
+  .story li { margin: 3px 0; }
+  .detail { padding: 18px 20px; margin-top: 20px; display: none; }
+  .detail.show { display: block; }
+  .detail h3 { margin: 0 0 4px; font-size: 17px; }
+  .detail .meta { display: grid; grid-template-columns: 120px 1fr; gap: 6px 12px; font-size: 14px; margin-top: 10px; }
+  .detail .meta span:nth-child(odd) { color: var(--muted); }
+  code { font-family: var(--mono); font-size: 12.5px; background: var(--brand-soft); padding: 1px 6px; border-radius: 6px; }
+
+  /* what the agent sees */
+  .side { position: sticky; top: 16px; padding: 0; overflow: hidden; }
+  .side-top { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .side-top .name { font-size: 13px; font-weight: 600; }
+  .side-top small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+  .chat { height: 580px; overflow-y: auto; padding: 14px 12px 18px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
+  .chat > * { flex: none; }
+  .b { max-width: 88%; padding: 8px 12px; border-radius: 16px; font-size: 13.5px; white-space: pre-line; animation: pop .25s ease-out; }
+  .b.in { align-self: flex-start; background: var(--bubble-in); }
+  .b.out { align-self: flex-end; background: var(--bubble-out); color: #fff; }
+  .blk { align-self: stretch; border: 1px solid var(--line-strong); border-radius: 10px; overflow: hidden; animation: pop .25s ease-out; }
+  .blk .cap { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; padding: 5px 10px; color: var(--muted); background: var(--bg); border-bottom: 1px solid var(--line); }
+  .blk pre { margin: 0; padding: 9px 10px; font-family: var(--mono); font-size: 11.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+  .blk.result .cap { background: var(--good-soft); color: var(--ink); }
+  .blk.error { border-color: var(--bad); }
+  .blk.error .cap { background: var(--bad-soft); color: var(--bad); }
+  .note { align-self: center; font-size: 12px; color: var(--muted); text-align: center; }
+  .typing { align-self: flex-start; background: var(--bubble-in); border-radius: 16px; padding: 10px 14px; display: flex; gap: 4px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); opacity: .5; animation: blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 50% { opacity: 1; } }
+  @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* diagram */
+  .node rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1.2; transition: all .25s; }
+  .node text { fill: var(--ink); font-size: 13px; font-weight: 600; pointer-events: none; }
+  .node text.s { font-size: 10.5px; font-weight: 400; fill: var(--muted); }
+  .node { cursor: pointer; }
+  .node:hover rect { stroke-width: 2; }
+  .node.k-client rect { fill: var(--client-soft); } .node.k-stacks rect { fill: var(--brand-soft); }
+  .node.k-tf rect { fill: var(--tf-soft); } .node.k-mem rect { fill: var(--mem-soft); } .node.k-site rect { fill: var(--site-soft); }
+  .node.on rect { stroke: var(--active); stroke-width: 2.6; }
+  .node.sel rect { stroke: var(--brand); stroke-width: 2.6; }
+  .node.bad rect { stroke: var(--bad); stroke-width: 2.8; fill: var(--bad-soft); }
+  .edge { stroke: var(--line-strong); stroke-width: 1.6; fill: none; transition: stroke .25s; }
+  .edge.on { stroke: var(--active); stroke-width: 2.6; stroke-dasharray: 7 6; animation: flow .8s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -26; } }
+  .group { fill: none; stroke: var(--brand); stroke-width: 1.2; stroke-dasharray: 5 5; opacity: .7; }
+  .glabel { fill: var(--brand); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 4px 16px 12px; font-size: 12px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 13px; text-align: center; }
+  footer a { color: var(--brand); }
+  @media (max-width: 1000px) {
+    .grid { grid-template-columns: 1fr; }
+    .side { position: static; }
+    .chat { height: 440px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg width="48" height="48" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" fill="#10231F"/><rect x="44" y="158" width="168" height="38" rx="9" fill="#14B8A6"/><rect x="62" y="110" width="150" height="38" rx="9" fill="#F5B841"/><rect x="44" y="62" width="150" height="38" rx="9" fill="#F4F1EA"/><circle cx="204" cy="52" r="11" fill="#14B8A6"/></svg>
+    <div><h1>How a question travels through Stacks</h1></div>
+  </header>
+  <p class="sub">Follow one tool call from an AI agent to a public library's website and back. Pick a story, press <b>Play</b>, step with <b>← →</b>, or click any component to see what it does and where its code lives.</p>
+  <div class="tags">
+    <span class="tag"><b>MCP</b> · stdio + stateless HTTP</span>
+    <span class="tag"><b>TinyFish</b> · Search · Fetch · Browser · Agent · Monitor</span>
+    <span class="tag"><b>TypeScript + Zod</b> · typed in, typed out</span>
+    <span class="tag"><b>No database</b> · nothing stored on disk</span>
+  </div>
+
+  <div class="stories" id="stories" role="tablist" aria-label="Stories"></div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="map">
+          <svg id="map" viewBox="0 0 1200 600" role="img" aria-label="Stacks architecture: MCP client, transport, the Stacks layers, the five TinyFish endpoints and the library website">
+            <rect class="group" x="440" y="30" width="300" height="548" rx="18"/>
+            <text class="glabel" x="458" y="54">STACKS · NODE + TYPESCRIPT</text>
+            <g id="edges"></g>
+            <g id="nodes"></g>
+          </svg>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--client-soft);border:1px solid var(--line-strong)"></i>Client</span>
+          <span><i style="background:var(--brand-soft);border:1px solid var(--line-strong)"></i>Stacks</span>
+          <span><i style="background:var(--mem-soft);border:1px solid var(--line-strong)"></i>In memory</span>
+          <span><i style="background:var(--tf-soft);border:1px solid var(--line-strong)"></i>TinyFish</span>
+          <span><i style="background:var(--site-soft);border:1px solid var(--line-strong)"></i>Library site</span>
+          <span><i style="background:var(--active)"></i>Active path</span>
+        </div>
+        <div class="controls">
+          <button id="play" class="primary" aria-label="Play this story">▶ Play</button>
+          <button id="prev" aria-label="Previous step">← Back</button>
+          <button id="next" aria-label="Next step">Next →</button>
+          <button id="reset" aria-label="Restart this story">Restart</button>
+          <div class="dots" id="dots"></div>
+        </div>
+      </div>
+
+      <div class="card story" id="story" aria-live="polite">
+        <div class="kicker" id="kicker">Step 1</div>
+        <h2 id="title"></h2>
+        <p id="body"></p>
+        <ul id="facts"></ul>
+      </div>
+
+      <div class="card detail" id="detail">
+        <h3 id="d-title"></h3>
+        <p id="d-body" style="margin:0;color:var(--muted)"></p>
+        <div class="meta" id="d-meta"></div>
+      </div>
+    </div>
+
+    <div class="card side">
+      <div class="side-top">
+        <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="32" fill="#1b1b1f"/><circle cx="24" cy="28" r="4" fill="#fff"/><circle cx="40" cy="28" r="4" fill="#fff"/><path d="M22 40c6 5 14 5 20 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+        <div class="name">What the agent sees<small>the chat, the tool call, and what comes back</small></div>
+      </div>
+      <div class="chat" id="chat"></div>
+    </div>
+  </div>
+
+  <footer>Stacks · <a href="https://github.com/VivekSalwan2000/stacks-mcp">source on GitHub</a> · built for TinyFish Student Bounty Drop 002 · a replay of recorded results, not a live server · timings are measured examples, not guarantees</footer>
+</div>
+
+<script>
+const REPO = "https://github.com/VivekSalwan2000/stacks-mcp/blob/main/";
+const NODES = {
+  client:   { x: 20,  y: 246, w: 170, label: "MCP client", sub: "Claude · ChatGPT · Cursor", kind: "client",
+              title: "The MCP client", body: "An AI app that speaks the Model Context Protocol. It reads the list of Stacks tools with their typed inputs and outputs, and decides which to call to answer the person.",
+              meta: [["Sees", "14 tools, each with a JSON Schema"], ["Sends", "tools/call with typed arguments"], ["Gets back", "structuredContent, or a structured error"]] },
+  transport:{ x: 230, y: 246, w: 170, label: "Transport", sub: "stdio · stateless HTTP", kind: "client",
+              title: "Transport", body: "How the client reaches Stacks. Local apps start it as a process and talk over stdio. Remote apps use Streamable HTTP, where every request is independent, so the server can restart or scale without losing anything.",
+              meta: [["Files", "src/index.ts · src/http.ts"], ["HTTP access", "the caller's own TinyFish key, or a token for the server's key"], ["No token set", "listens on 127.0.0.1 only"]] },
+  tool:     { x: 465, y: 78,  w: 250, label: "Tool layer", sub: "Zod input · typed output · errors", kind: "stacks",
+              title: "Tool layer", body: "Registers the 14 tools. Arguments are checked against each tool's Zod schema before anything runs, results are returned as typed structuredContent, and every thrown error becomes a structured error result. Nothing is swallowed.",
+              meta: [["Files", "src/tools/ · src/core/tool.ts"], ["Read-only tools", "12 of 14"], ["Guard", "a snapshot test fails if any tool's shape changes"]] },
+  adapter:  { x: 465, y: 162, w: 250, label: "Library adapter", sub: "which page to load, and how", kind: "stacks",
+              title: "Library adapter (BiblioCommons)", body: "Everything specific to one library platform: which URL answers each question, what to cache, and how to tell 'not found', 'not supported', 'blocked' and 'changed' apart. Another platform is another adapter; the tools above do not change.",
+              meta: [["File", "src/adapters/bibliocommons/adapter.ts"], ["Interface", "LibraryAdapter in src/adapters/types.ts"], ["Libraries", "54 verified in registry.json"]] },
+  cache:    { x: 465, y: 246, w: 118, label: "Cache", sub: "TTL · in memory", kind: "mem",
+              title: "Cache", body: "A small in-memory cache with a time limit per kind of data. Identical calls that arrive at the same moment share one page read. It is lost on restart, on purpose: Stacks stores nothing on disk.",
+              meta: [["File", "src/core/cache.ts"], ["Availability", "5 minutes"], ["Search", "10 minutes"], ["Events", "30 minutes"], ["Branches", "60 minutes"]] },
+  pace:     { x: 597, y: 246, w: 118, label: "Pacing", sub: "750 ms per host", kind: "mem",
+              title: "Per-host pacing", body: "Stacks is a guest on library websites. Requests to the same host are spaced at least 750 ms apart, so a burst of tool calls never becomes a burst of page loads.",
+              meta: [["File", "src/core/cache.ts"], ["Gap", "750 ms per host"]] },
+  web:      { x: 465, y: 330, w: 250, label: "web.ts", sub: "the only code that touches the network", kind: "stacks",
+              title: "web.ts: the TinyFish client", body: "The single file that makes network calls, and every one is a TinyFish call. It keeps one warm remote browser, blocks images, fonts and stylesheets, retries through a proxy when a site blocks the direct route, and puts a deadline on every page read.",
+              meta: [["File", "src/core/web.ts"], ["Page deadline", "80 seconds"], ["Browser session", "reused, replaced after 4 minutes"], ["On a dead session", "one retry on a fresh one"]] },
+  contract: { x: 465, y: 414, w: 118, label: "Contract", sub: "contracts.ts", kind: "stacks",
+              title: "Contract check", body: "A Zod schema of exactly the fields Stacks depends on. Every page read is validated against it. If the site renames or drops a field, the tool fails with SITE_CHANGED and names the field, instead of returning less data.",
+              meta: [["File", "src/adapters/bibliocommons/contracts.ts"], ["On failure", "SITE_CHANGED with broken_fields"], ["Rule", "only require a field a tool uses"]] },
+  parse:    { x: 597, y: 414, w: 118, label: "Parser", sub: "→ public model", kind: "stacks",
+              title: "Parser", body: "Pure functions that turn validated page data into the public data model: titles, availability by branch, copies, branches, events. No network, so they are tested against recorded pages. Staff-only fields in the page are never read.",
+              meta: [["File", "src/adapters/bibliocommons/parse.ts"], ["Output", "the shapes in src/schemas.ts"], ["Tests", "recorded pages in test/fixtures"]] },
+  jobs:     { x: 465, y: 498, w: 250, label: "Job ids", sub: "slow Agent runs, no job store", kind: "stacks",
+              title: "Job ids", body: "An Agent run can take minutes, longer than a client waits for a tool. Stacks waits a while, then returns a job id made of the kind and the TinyFish run id. Nothing is stored, so jobs survive a restart and work across server instances.",
+              meta: [["File", "src/core/jobs.ts"], ["Format", "<kind>.<TinyFish run id>"], ["Kinds", "ask · search · availability · diagnosis"]] },
+  search:   { x: 800, y: 78,  w: 150, label: "Search", sub: "TinyFish", kind: "tf",
+              title: "TinyFish Search", body: "Finds library catalogues that are not in the built-in directory, and finds the right page on a library's own website before an Agent run.",
+              meta: [["Used by", "find_library · ask_library"]] },
+  fetch:    { x: 800, y: 162, w: 150, label: "Fetch", sub: "TinyFish", kind: "tf",
+              title: "TinyFish Fetch", body: "Reads pages as clean text. It is the fastest and cheapest endpoint, so Stacks uses it wherever plain text is enough: confirming a catalogue is live, checking page landmarks in the health check, and choosing the Agent's starting page.",
+              meta: [["Used by", "find_library · health_check · ask_library · registry refresh"]] },
+  browser:  { x: 800, y: 246, w: 150, label: "Browser", sub: "TinyFish · remote Chromium", kind: "tf",
+              title: "TinyFish Browser", body: "A remote Chromium that Stacks drives over CDP. BiblioCommons renders its data with JavaScript, so plain text is not enough. Stacks loads the page, reads the data the page itself renders from, and on title pages reads the page's own availability request as it arrives.",
+              meta: [["Used by", "search, title, availability, wait, branches, events"], ["Typical time", "2 to 5 seconds"]] },
+  agent:    { x: 800, y: 330, w: 150, label: "Agent", sub: "TinyFish", kind: "tf",
+              title: "TinyFish Agent", body: "Navigates and reasons. It is much slower, so Stacks gives it the jobs that need judgment: open questions about a library's services, a best-effort read after a site change, and diagnosing what changed on a failing page.",
+              meta: [["Used by", "ask_library · fallback · health_check --deep"], ["Typical time", "1 to 3 minutes"]] },
+  monitor:  { x: 800, y: 414, w: 150, label: "Monitor", sub: "TinyFish", kind: "tf",
+              title: "TinyFish Monitor", body: "Re-reads a title's page on a schedule and detects changes. A watch is a TinyFish Monitor whose name encodes the library and title, so Stacks needs no table of watches.",
+              meta: [["Used by", "watch_title · list_watches · cancel_watch"], ["Schedules", "hourly · every 6 hours · daily"]] },
+  site:     { x: 1010, y: 246, w: 170, label: "Library website", sub: "BiblioCommons", kind: "site",
+              title: "The library's website", body: "The same public pages a visitor would open: the catalogue, branch pages and the events calendar. Stacks never logs in, submits a form or crawls.",
+              meta: [["Read", "on demand, when a person asks"], ["Never", "logins, holds, form submissions"]] },
+  health:   { x: 230, y: 498, w: 170, label: "Health checks", sub: "does every tool still work?", kind: "stacks",
+              title: "Health checks", body: "Live checks with known-good queries. Fetch confirms each page's landmarks are there, Browser confirms each tool's contract still holds, and the platform version is compared with the verified one. Also available to the agent as the health_check tool.",
+              meta: [["File", "src/health/checks.ts"], ["Command", "npx stacks-mcp health --library tpl"], ["Exit code", "non-zero when anything fails"]] },
+  ci:       { x: 20,  y: 498, w: 170, label: "Daily canary", sub: "GitHub Actions", kind: "client",
+              title: "Daily canary", body: "A scheduled workflow runs the health check against three libraries every day. When one fails it opens an issue with the report, so a site change is found by the project before a user finds it.",
+              meta: [["File", ".github/workflows/canary.yml"], ["Libraries", "Toronto · Vancouver · Chicago"]] },
+};
+const EDGES = [
+  ["client","transport"],["transport","tool"],["tool","adapter"],["adapter","cache"],["adapter","pace"],["pace","web"],
+  ["web","search"],["web","fetch"],["web","browser"],["web","agent"],["web","monitor"],
+  ["search","site"],["fetch","site"],["browser","site"],["agent","site"],["monitor","site"],
+  ["web","contract"],["contract","parse"],["ci","health"],["health","adapter"],
+];
+const H = 56;
+const center = (n) => ({ x: NODES[n].x + NODES[n].w / 2, y: NODES[n].y + H / 2 });
+
+function edgePath(a, b) {
+  const A = NODES[a], B = NODES[b];
+  const ac = center(a), bc = center(b);
+  let x1, y1, x2, y2;
+  if (A.x + A.w < B.x || B.x + B.w < A.x) {
+    x1 = ac.x < bc.x ? A.x + A.w : A.x; y1 = ac.y;
+    x2 = ac.x < bc.x ? B.x : B.x + B.w; y2 = bc.y;
+    const mx = (x1 + x2) / 2;
+    return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+  }
+  x1 = ac.x; y1 = ac.y < bc.y ? A.y + H : A.y; x2 = bc.x; y2 = ac.y < bc.y ? B.y : B.y + H;
+  return `M${x1},${y1} L${x2},${y2}`;
+}
+
+const svgNS = "http://www.w3.org/2000/svg";
+const edgesG = document.getElementById("edges"), nodesG = document.getElementById("nodes");
+const edgeEls = {};
+for (const [a, b] of EDGES) {
+  const p = document.createElementNS(svgNS, "path");
+  p.setAttribute("d", edgePath(a, b)); p.setAttribute("class", "edge");
+  edgesG.appendChild(p); edgeEls[a + ">" + b] = p;
+}
+const nodeEls = {};
+for (const [id, n] of Object.entries(NODES)) {
+  const g = document.createElementNS(svgNS, "g");
+  g.setAttribute("class", "node" + (n.kind ? " k-" + n.kind : ""));
+  g.setAttribute("tabindex", "0"); g.setAttribute("role", "button"); g.setAttribute("aria-label", n.label + " details");
+  const r = document.createElementNS(svgNS, "rect");
+  Object.entries({ x: n.x, y: n.y, width: n.w, height: H, rx: 12 }).forEach(([k, v]) => r.setAttribute(k, v));
+  const t = document.createElementNS(svgNS, "text"); t.setAttribute("x", n.x + n.w / 2); t.setAttribute("y", n.y + 24); t.setAttribute("text-anchor", "middle"); t.textContent = n.label;
+  const s = document.createElementNS(svgNS, "text"); s.setAttribute("class", "s"); s.setAttribute("x", n.x + n.w / 2); s.setAttribute("y", n.y + 42); s.setAttribute("text-anchor", "middle"); s.textContent = n.sub;
+  g.append(r, t, s); nodesG.appendChild(g); nodeEls[id] = g;
+  const open = () => showDetail(id);
+  g.addEventListener("click", open);
+  g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+}
+
+function showDetail(id) {
+  const n = NODES[id];
+  Object.values(nodeEls).forEach((el) => el.classList.remove("sel"));
+  nodeEls[id].classList.add("sel");
+  document.getElementById("d-title").textContent = n.title;
+  document.getElementById("d-body").textContent = n.body;
+  const meta = document.getElementById("d-meta"); meta.innerHTML = "";
+  for (const [k, v] of n.meta) {
+    const a = document.createElement("span"); a.textContent = k;
+    const b = document.createElement("span");
+    const path = /^(src|test|\.github)\/[\w./-]+$/.test(v) ? v : null;
+    if (path) { const link = document.createElement("a"); link.href = REPO + path; link.textContent = v; link.style.color = "var(--brand)"; b.appendChild(link); } else b.textContent = v;
+    meta.append(a, b);
+  }
+  const d = document.getElementById("detail"); d.classList.add("show");
+  d.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// Chat items: ["out", text] the person · ["in", text] the assistant · ["call", text] a tool call
+// ["result", text] typed data · ["error", text] a structured error · ["note", text] · ["typing"]
+const E = (...pairs) => pairs;
+const STORIES = [
+  { id: "live", name: "A live lookup", blurb: "check_availability, read from the site",
+    steps: [
+      { nodes: ["client","transport"], edges: E(["client","transport"]), t: "0 s",
+        title: "The agent picks a tool", body: "Someone asks about a book. The agent already has the library id from find_library and the title id from search_catalog, so it calls check_availability with both.",
+        facts: ["Ids come from earlier tool results, never from a guess", "The call is plain JSON over stdio or HTTP"],
+        chat: [["out", "Is Project Hail Mary on the shelf anywhere in Toronto?"], ["call", "check_availability({\n  library: \"tpl\",\n  title_id: \"S234C3970025\"\n})"]] },
+      { nodes: ["transport","tool"], edges: E(["transport","tool"]), t: "instant",
+        title: "The arguments are checked", body: "Before any work starts, the tool layer validates the arguments against the tool's Zod schema. A wrong type or a value out of range is rejected here, with a message naming the field.",
+        facts: ["Input schema and output schema for every tool", "Bad input never reaches the library's website"], chat: [["typing"]] },
+      { nodes: ["tool","adapter"], edges: E(["tool","adapter"]), t: "instant",
+        title: "The adapter picks the page", body: "The BiblioCommons adapter knows which page answers this question: the title's record page on Toronto's catalogue.",
+        facts: ["tpl.bibliocommons.com/v2/record/S234C3970025", "The tool has no scraping logic of its own"], chat: [] },
+      { nodes: ["adapter","cache"], edges: E(["adapter","cache"]), t: "instant",
+        title: "Cache: not seen recently", body: "The adapter asks the cache first. Availability is kept for 5 minutes, and this title has not been read in that time, so the page has to be loaded.",
+        facts: ["Key: bc:tpl:title:S234C3970025", "Identical calls arriving together share one read"], chat: [] },
+      { nodes: ["adapter","pace","web"], edges: E(["adapter","pace"],["pace","web"]), t: "0 to 750 ms",
+        title: "Wait for this host's turn", body: "Requests to one library host are spaced at least 750 ms apart. Then web.ts, the only code that touches the network, takes over.",
+        facts: ["Polite by design: no bursts against a library site", "Every page read has an 80 second deadline"], chat: [] },
+      { nodes: ["web","browser","site"], edges: E(["web","browser"],["browser","site"]), t: "about 3 s",
+        title: "TinyFish Browser loads the page", body: "A remote Chromium, already warm from earlier calls, opens the record page. Stacks reads the data the page renders from, and the page's own background request for per-branch availability as it arrives.",
+        facts: ["Images, fonts and stylesheets are never downloaded", "Stacks never calls the availability address itself", "The read stops as soon as the data is there"], chat: [] },
+      { nodes: ["web","contract"], edges: E(["web","contract"]), t: "instant",
+        title: "The contract check", body: "The page data is validated against the fields Stacks depends on. Here everything matches. If a field had been renamed or removed, the call would stop now with SITE_CHANGED.",
+        facts: ["216 copies across 92 branches, every field present", "See the story 'The site changes' for the other outcome"], chat: [] },
+      { nodes: ["contract","parse"], edges: E(["contract","parse"]), t: "instant",
+        title: "Page data becomes the public model", body: "Pure functions turn the site's own structure into Stacks's platform-independent shapes: a summary, then branches, then copies with a status, call number and due date.",
+        facts: ["The library's own wording is kept in status_label", "Staff-only fields in the page are never read"], chat: [] },
+      { nodes: ["cache","tool","transport","client"], edges: E(["transport","tool"],["client","transport"]), t: "3.1 s in total",
+        title: "A typed answer, with its source", body: "The result is stored for 5 minutes and returned as structured data. The source object says which TinyFish endpoint read it, from which page, and when. The agent answers from data, not from memory.",
+        facts: ["Measured: 3.1 s against Toronto Public Library", "Trimmed here to one branch and one copy"],
+        chat: [["result", "{\n  \"title\": \"Project Hail Mary\",\n  \"summary\": { \"status\": \"available\",\n    \"total_copies\": 216, \"available_copies\": 2,\n    \"holds\": 178 },\n  \"branches_holding\": 92,\n  \"branches_on_shelf\": 1,\n  \"branches\": [{\n    \"branch_name\": \"North York Central Library\",\n    \"copies_on_shelf\": 1,\n    \"copies\": [{ \"status\": \"on_shelf\",\n      \"call_number\": \"SCIENCE FICTION WEI\" }]\n  }],\n  \"source\": { \"engines\": [\"browser\"],\n    \"cached\": false,\n    \"retrieved_at\": \"2026-11-12T01:07:45Z\" }\n}"],
+               ["in", "Yes. One copy is on the shelf right now at North York Central Library, under SCIENCE FICTION WEI. It is popular though: 178 holds on 216 copies across the system."]] },
+    ] },
+  { id: "cache", name: "Asked again", blurb: "the same call, answered from memory",
+    steps: [
+      { nodes: ["client","transport","tool"], edges: E(["client","transport"],["transport","tool"]), t: "0 ms",
+        title: "The same question, a minute later", body: "The agent makes the same call again, perhaps because the person asked a follow-up. The arguments are checked exactly as before.",
+        facts: ["Nothing about the call is different"],
+        chat: [["out", "And how many holds did you say it has?"], ["call", "check_availability({\n  library: \"tpl\",\n  title_id: \"S234C3970025\"\n})"]] },
+      { nodes: ["tool","adapter","cache"], edges: E(["tool","adapter"],["adapter","cache"]), t: "about 2 ms",
+        title: "Cache hit", body: "The adapter finds the result it stored a minute ago. Availability is trusted for 5 minutes, so there is no need to load the page again.",
+        facts: ["No TinyFish call, no load on the library's site", "Search results last 10 minutes, events 30, branches 60"], chat: [["typing"]] },
+      { nodes: ["cache","tool","transport","client"], edges: E(["transport","tool"],["client","transport"]), t: "under 20 ms",
+        title: "The answer says it is cached", body: "The result is the same typed data, but its source is honest about where it came from: cached is true, and retrieved_at still shows when the page was really read.",
+        facts: ["In testing, cached calls took a median of 2 ms", "The cache lives in memory only and is lost on restart"],
+        chat: [["result", "{\n  \"title\": \"Project Hail Mary\",\n  \"summary\": { \"status\": \"available\",\n    \"holds\": 178, ... },\n  \"source\": { \"engines\": [\"browser\"],\n    \"cached\": true,\n    \"retrieved_at\": \"2026-11-12T01:07:45Z\" }\n}"],
+               ["in", "178 holds, on 216 copies. That figure is from a minute ago."]] },
+    ] },
+  { id: "break", name: "The site changes", blurb: "a field disappears, and Stacks says so",
+    steps: [
+      { nodes: ["client","transport","tool","adapter"], edges: E(["client","transport"],["transport","tool"],["tool","adapter"]), t: "0 s",
+        title: "An ordinary search", body: "The agent searches the catalogue. Unknown to anyone, the library's website was updated overnight and one field in its page data now has a different name.",
+        facts: ["This story replays a test that removes a field from a recorded page", "It is how the tools are proven to fail loudly"],
+        chat: [["out", "Find me the Dune books at Toronto Public Library."], ["call", "search_catalog({\n  library: \"tpl\",\n  query: \"dune\"\n})"]] },
+      { nodes: ["adapter","pace","web","browser","site"], edges: E(["adapter","pace"],["pace","web"],["web","browser"],["browser","site"]), t: "about 3 s",
+        title: "The page loads normally", body: "Nothing looks wrong yet. The page returns a normal success status and it contains data. A scraper that only checks 'did the page load' would carry on.",
+        facts: ["HTTP 200, page data present"], chat: [["typing"]] },
+      { nodes: ["web","contract"], edges: E(["web","contract"]), bad: ["contract"], t: "instant",
+        title: "The contract check fails", body: "Every search result is validated against the contract. The title field is missing from all of them, so the check fails and names each broken field. The parser never runs, so no half-filled results exist.",
+        facts: ["12 field problems, each with its exact path", "'Nothing found' and 'broken' are different answers"], chat: [] },
+      { nodes: ["web","agent","site","jobs"], edges: E(["web","agent"],["agent","site"]), t: "started, not waited for",
+        title: "A fallback is started", body: "Stacks starts a TinyFish Agent run to read the page a slower way, and puts its job id in the error. The break is reported either way. The fallback is best-effort: a run that reads nothing is reported as a failed job, never as an empty list.",
+        facts: ["Job id: search.<TinyFish run id>", "In testing, the Agent returned rows in 3 of 6 runs"], chat: [] },
+      { nodes: ["tool","transport","client"], edges: E(["transport","tool"],["client","transport"]), bad: ["contract"], t: "about 3 s in total",
+        title: "A loud, typed error", body: "The agent receives an error it can act on: a code, a message, a hint, and the broken fields. It tells the person the truth instead of saying the library has no Dune books.",
+        facts: ["12 error codes, each with a hint", "retryable: false, so the agent does not loop"],
+        chat: [["error", "{ \"error\": {\n  \"code\": \"SITE_CHANGED\",\n  \"message\": \"The site's search page data no longer matches what Stacks expects (12 field problems).\",\n  \"hint\": \"The website changed. Run the health_check tool for a full report...\",\n  \"retryable\": false,\n  \"details\": {\n    \"contract\": \"search page\",\n    \"broken_fields\": [\n      \"entities.bibs.S234C2504662.briefInfo.title: expected string, received undefined\"\n    ],\n    \"fallback_job_id\": \"search.0000...0001\"\n  }\n} }"],
+               ["in", "I can't search Toronto's catalogue right now. The library's website changed and the search tool no longer reads it correctly, so I won't guess. A slower read has been started as a fallback."]] },
+      { nodes: ["ci","health","adapter","web","fetch","browser","site"], edges: E(["ci","health"],["health","adapter"],["web","fetch"],["web","browser"],["fetch","site"],["browser","site"]), bad: ["contract"], t: "next morning at the latest",
+        title: "The canary reports it", body: "The daily canary runs the health check: Fetch looks for each page's landmarks, Browser re-checks each tool's contract. The failing check opens a GitHub issue with the report, so a maintainer starts with the exact broken fields.",
+        facts: ["The fix is usually a few lines in contracts.ts and parse.ts", "A new recorded page and a test go in with it"],
+        chat: [["note", "Meanwhile, in the repository"], ["result", "Stacks health check: tpl\nBROKEN: 1 of 9 checks failed (search_catalog returns typed results).\n\n  [PASS] search page is reachable and intact  (fetch)\n  [FAIL] search_catalog returns typed results  (browser)\n         SITE_CHANGED: entities.bibs.*.briefInfo.title\n  [PASS] check_availability returns copy-level data  (browser)"], ["note", "Illustrative report for this simulated change"]] },
+    ] },
+  { id: "ask", name: "A slow question", blurb: "ask_library hands back a job",
+    steps: [
+      { nodes: ["client","transport","tool"], edges: E(["client","transport"],["transport","tool"]), t: "0 s",
+        title: "A question no fixed tool covers", body: "Policies and services are written in prose on the library's own website, in a different place for every library. The agent uses ask_library for these.",
+        facts: ["The other tools read fixed pages; this one needs judgment"],
+        chat: [["out", "I don't live in Toronto. Can I still get a library card?"], ["call", "ask_library({\n  library: \"tpl\",\n  question: \"How do I get a card as a non-resident?\"\n})"]] },
+      { nodes: ["tool","adapter","web","search","site"], edges: E(["tool","adapter"],["web","search"],["search","site"]), t: "a few seconds",
+        title: "Search finds candidate pages", body: "TinyFish Search looks for the question on the library's own domain only, and keeps the top three pages.",
+        facts: ["Results from other websites are discarded"], chat: [["typing"]] },
+      { nodes: ["web","fetch","site"], edges: E(["web","fetch"],["fetch","site"]), t: "a few seconds",
+        title: "Fetch reads them and picks a start", body: "TinyFish Fetch reads those pages as text. Stacks scores each one against the words in the question and picks the best as the Agent's starting point. A good start keeps the slow part short.",
+        facts: ["If nothing matches, the Agent starts from the library's home page"], chat: [] },
+      { nodes: ["web","agent","site"], edges: E(["web","agent"],["agent","site"]), t: "running",
+        title: "The Agent browses the site", body: "A TinyFish Agent opens the starting page, follows a few links if it needs to, and writes an answer using only what the library's website says. It is told not to log in, submit forms or leave the site.",
+        facts: ["A full answer usually takes 1 to 3 minutes", "If the site does not say, it answers found: false"], chat: [] },
+      { nodes: ["jobs","tool","transport","client"], edges: E(["transport","tool"],["client","transport"]), t: "about 50 s",
+        title: "Too slow to wait: a job id comes back", body: "A client will not wait minutes for one tool. So Stacks returns what it has: the status 'running', a job id, and the pages it already consulted. The job id contains the TinyFish run id, so nothing needs to be stored.",
+        facts: ["Wait time is set by STACKS_AGENT_WAIT_MS", "The id still works after a server restart"],
+        chat: [["result", "{\n  \"status\": \"running\",\n  \"job_id\": \"ask.<TinyFish run id>\",\n  \"answer\": null,\n  \"pages_consulted\": [ { \"url\": \"...\", \"title\": \"...\" } ],\n  \"source\": { \"engines\": [\"search\", \"fetch\", \"agent\"] }\n}"],
+               ["in", "I'm checking the library's website for that. One moment."]] },
+      { nodes: ["client","transport","tool","jobs","web","agent"], edges: E(["client","transport"],["transport","tool"],["web","agent"]), t: "1 to 3 minutes",
+        title: "The agent collects the answer", body: "The agent calls get_job_result with the job id until the run is finished. The answer arrives with the pages it came from, so the person can check it.",
+        facts: ["If the run fails, the result is a failed job, never an empty answer"],
+        chat: [["call", "get_job_result({\n  job_id: \"ask.<TinyFish run id>\"\n})"],
+               ["result", "{\n  \"status\": \"completed\",\n  \"result\": {\n    \"answer\": \"(the Agent's answer, in plain language)\",\n    \"found\": true,\n    \"source_urls\": [ \"(pages on the library's own site)\" ]\n  }\n}"],
+               ["note", "The answer text is left out here: it changes with the library's policy"]] },
+    ] },
+];
+
+const chat = document.getElementById("chat");
+let story = 0, step = 0, timer = null;
+const steps = () => STORIES[story].steps;
+
+function renderChat(upTo) {
+  chat.innerHTML = "";
+  for (let i = 0; i <= upTo; i++) {
+    for (const [kind, text] of steps()[i].chat) {
+      const typing = chat.querySelector(".typing"); if (typing) typing.remove();
+      if (kind === "typing") { const t = document.createElement("div"); t.className = "typing"; t.innerHTML = "<i></i><i></i><i></i>"; chat.appendChild(t); continue; }
+      if (kind === "note") { const n = document.createElement("div"); n.className = "note"; n.textContent = text; chat.appendChild(n); continue; }
+      if (kind === "in" || kind === "out") { const b = document.createElement("div"); b.className = "b " + kind; b.textContent = text; chat.appendChild(b); continue; }
+      const blk = document.createElement("div"); blk.className = "blk " + kind;
+      const cap = document.createElement("div"); cap.className = "cap";
+      cap.textContent = kind === "call" ? "Tool call" : kind === "error" ? "Structured error" : "Tool result";
+      const pre = document.createElement("pre"); pre.textContent = text;
+      blk.append(cap, pre); chat.appendChild(blk);
+    }
+  }
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function go(i) {
+  step = Math.max(0, Math.min(steps().length - 1, i));
+  const s = steps()[step];
+  Object.entries(nodeEls).forEach(([id, el]) => { el.classList.toggle("on", s.nodes.includes(id)); el.classList.toggle("bad", (s.bad || []).includes(id)); });
+  const active = new Set(s.edges.map(([a, b]) => a + ">" + b));
+  Object.entries(edgeEls).forEach(([k, el]) => el.classList.toggle("on", active.has(k)));
+  document.getElementById("kicker").textContent = `${STORIES[story].name} · step ${step + 1} of ${steps().length} · ${s.t}`;
+  document.getElementById("title").textContent = s.title;
+  document.getElementById("body").textContent = s.body;
+  const facts = document.getElementById("facts"); facts.innerHTML = "";
+  for (const f of s.facts) { const li = document.createElement("li"); li.textContent = f; facts.appendChild(li); }
+  document.querySelectorAll(".dot").forEach((d, k) => d.classList.toggle("on", k <= step));
+  renderChat(step);
+  history.replaceState(null, "", `#story=${story + 1}&step=${step + 1}`);
+}
+
+const dots = document.getElementById("dots");
+function buildDots() {
+  dots.innerHTML = "";
+  steps().forEach((_, k) => { const d = document.createElement("button"); d.className = "dot"; d.textContent = k + 1; d.setAttribute("aria-label", "Go to step " + (k + 1)); d.onclick = () => { stop(); go(k); }; dots.appendChild(d); });
+}
+
+const storiesEl = document.getElementById("stories");
+STORIES.forEach((s, k) => {
+  const b = document.createElement("button"); b.setAttribute("role", "tab");
+  b.append(document.createTextNode(`${k + 1}. ${s.name}`)); const sm = document.createElement("small"); sm.textContent = s.blurb; b.appendChild(sm);
+  b.onclick = () => { stop(); pick(k, 0); };
+  storiesEl.appendChild(b);
+});
+function pick(k, at) {
+  story = Math.max(0, Math.min(STORIES.length - 1, k));
+  [...storiesEl.children].forEach((b, i) => { b.classList.toggle("on", i === story); b.setAttribute("aria-selected", i === story); });
+  buildDots(); go(at);
+}
+
+const playBtn = document.getElementById("play");
+function stop() { clearInterval(timer); timer = null; playBtn.textContent = "▶ Play"; }
+function play() {
+  if (timer) return stop();
+  if (step >= steps().length - 1) go(0);
+  playBtn.textContent = "❚❚ Pause";
+  timer = setInterval(() => { if (step >= steps().length - 1) return stop(); go(step + 1); }, 3400);
+}
+playBtn.onclick = play;
+document.getElementById("next").onclick = () => { stop(); go(step + 1); };
+document.getElementById("prev").onclick = () => { stop(); go(step - 1); };
+document.getElementById("reset").onclick = () => { stop(); go(0); };
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest && e.target.closest(".node, button")) return;
+  if (e.key === "ArrowRight") { stop(); go(step + 1); }
+  if (e.key === "ArrowLeft") { stop(); go(step - 1); }
+  if (e.key === " ") { e.preventDefault(); play(); }
+});
+// Deep links: #story=3&step=5 opens that moment (handy for sharing). ?capture=1 hides the page header for clean screenshots.
+const num = (name) => Number((location.hash.match(new RegExp(name + "=(\\d+)")) || [])[1] || 1) - 1;
+if (new URLSearchParams(location.search).has("capture")) {
+  const st = document.createElement("style");
+  st.textContent = "header,.sub,.tags,footer{display:none!important}.wrap{padding-top:18px!important}*{animation-duration:0s!important}";
+  document.head.appendChild(st);
+}
+pick(num("story"), num("step"));
+</script>
+</body>
+</html>

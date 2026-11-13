@@ -22,7 +22,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-14B8A6.svg)](CONTRIBUTING.md)
 
-[**Run it**](#-quick-start) · [**Tools**](#-tools) · [**Architecture**](#-system-architecture) · [**How TinyFish is used**](#-how-tinyfish-is-used) · [**Breaks loudly**](#-breaks-loudly) · [**Contribute**](#-contributing)
+[**Interactive explorer ↗**](https://viveksalwan2000.github.io/stacks-mcp/architecture.html) · [**Run it**](#-quick-start) · [**Tools**](#-tools) · [**Architecture**](#-system-architecture) · [**How TinyFish is used**](#-how-tinyfish-is-used) · [**Breaks loudly**](#-breaks-loudly) · [**Contribute**](#-contributing)
 
 </div>
 
@@ -224,6 +224,8 @@ Full input and output schemas: [docs/TOOLS.md](docs/TOOLS.md), generated from th
 <img src="docs/media/sections/04.svg" width="100%" alt="Section 04">
 
 ## 🏗 System architecture
+
+**[🧭 Open the interactive system explorer](https://viveksalwan2000.github.io/stacks-mcp/architecture.html)**: play one tool call step by step through four stories, or click any component for its role, limits and source file. It is a replay of recorded results, so it needs no install and no key.
 
 ```mermaid
 flowchart TB
