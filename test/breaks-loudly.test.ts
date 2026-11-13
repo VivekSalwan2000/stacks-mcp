@@ -387,6 +387,31 @@ describe("fixes from the 0.1.0 test pass", () => {
     expect(inputOf("search_catalog").safeParse({ query: "x".repeat(200) }).success).toBe(true);
   });
 
+  it("cancel_watch with dry_run names the watch and deletes nothing", async () => {
+    const { web, ctx, tool } = setup();
+    web.serve("/v2/record/S234C3970025", fixture("record"), { availability: fixture("availability") });
+    const made = (await tool("watch_title").handler({ library: "tpl", title_id: "S234C3970025", check_every: "day" }, ctx)) as any;
+    const id = made.watch.watch_id;
+
+    const preview = (await tool("cancel_watch").handler({ watch_id: id, dry_run: true }, ctx)) as any;
+    expect(preview).toMatchObject({ cancelled: false, dry_run: true, watch_id: id, library: "tpl", title_id: "S234C3970025", title: made.watch.title });
+    expect(web.watches).toHaveLength(1);
+
+    const real = (await tool("cancel_watch").handler({ watch_id: id, dry_run: false }, ctx)) as any;
+    expect(real).toMatchObject({ cancelled: true, dry_run: false, watch_id: id });
+    expect(web.watches).toHaveLength(0);
+  });
+
+  it("cancel_watch refuses a monitor Stacks did not create, even on a dry run", async () => {
+    const { web, ctx, tool } = setup();
+    web.watches.push({ id: "other-1", name: "my own monitor", url: "https://example.com", schedule_cron: "0 9 * * *", status: "active", last_error: null, webhook_url: null, created_at: "2026-11-12 00:00:00" });
+    for (const dry_run of [true, false]) {
+      const err = await failure(() => tool("cancel_watch").handler({ watch_id: "other-1", dry_run }, ctx));
+      expect(err.code).toBe("NOT_FOUND");
+    }
+    expect(web.watches).toHaveLength(1);
+  });
+
   it("cancel_watch is the only tool marked destructive", () => {
     expect(TOOLS.filter((t) => t.destructive).map((t) => t.name)).toEqual(["cancel_watch"]);
   });

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- `cancel_watch` takes `dry_run`: it reports which watch would be cancelled and deletes nothing. Its output now also names the watch (`library`, `title_id`, `title`).
+- The tool contract is recorded in `test/__snapshots__/tool-schemas.json`; a test fails when any tool's name, description, input or output changes.
+- New offline tests for the MCP protocol layer and for who the HTTP server lets in.
+- CI runs ESLint and enforces a test coverage minimum.
+- `SECURITY.md`, and a "Library compatibility report" issue form.
+
 ## 0.1.1
 
 Fixes found by a full test pass of 0.1.0.

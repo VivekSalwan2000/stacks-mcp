@@ -142,18 +142,30 @@ export const cancelWatch = defineTool({
   name: "cancel_watch",
   title: "Cancel a watch",
   description:
-    "Stop and permanently delete a watch created with watch_title. TinyFish stops re-checking the title and sends no more notifications. Only watches made by Stacks can be cancelled; get the watch_id from list_watches.",
+    "Stop and permanently delete a watch created with watch_title. TinyFish stops re-checking the title and sends no more notifications. Only watches made by Stacks can be cancelled; get the watch_id from list_watches. Set dry_run to see which watch would be cancelled without cancelling it, for example to confirm with the user first.",
   writes: true,
   destructive: true,
-  input: { watch_id: z.string().describe("The watch_id from watch_title or list_watches.") },
-  output: { cancelled: z.boolean(), watch_id: z.string(), ...sourceField },
-  handler: async ({ watch_id }, ctx) => {
+  input: {
+    watch_id: z.string().describe("The watch_id from watch_title or list_watches."),
+    dry_run: z.boolean().default(false).describe("If true, only report which watch would be cancelled. Nothing is deleted."),
+  },
+  output: {
+    cancelled: z.boolean().describe("True if the watch was deleted. Always false on a dry run."),
+    dry_run: z.boolean(),
+    watch_id: z.string(),
+    library: z.string(),
+    title_id: z.string(),
+    title: z.string().nullable(),
+    ...sourceField,
+  },
+  handler: async ({ watch_id, dry_run }, ctx) => {
     // Only delete monitors Stacks created: never touch the user's other TinyFish monitors.
     const target = (await ctx.web.watchList()).find((w) => w.id === watch_id);
-    if (!target || !decodeName(target.name)) {
+    const meta = target ? decodeName(target.name) : null;
+    if (!meta) {
       throw new StacksError("NOT_FOUND", `No Stacks watch with id ${watch_id}.`, { hint: "Call list_watches to see valid watch ids." });
     }
-    await ctx.web.watchCancel(watch_id);
-    return { cancelled: true, watch_id, source: liveSource(["monitor"], null) };
+    if (!dry_run) await ctx.web.watchCancel(watch_id);
+    return { cancelled: !dry_run, dry_run, watch_id, ...meta, source: liveSource(["monitor"], null) };
   },
 });

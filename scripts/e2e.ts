@@ -19,7 +19,6 @@ const [a, b] = InMemoryTransport.createLinkedPair();
 await Promise.all([server.connect(a), client.connect(b)]);
 
 let failures = 0;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function call(name: string, args: Record<string, unknown>, show: (r: any) => string, expectError?: string): Promise<any> {
   const t0 = Date.now();
   const res = await client.callTool({ name, arguments: args }, undefined, { timeout: 180_000 });

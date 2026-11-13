@@ -71,7 +71,9 @@ export class FakeWeb implements Web {
   async watchRunNow(): Promise<{ text: string | null }> {
     return { text: null };
   }
-  async watchCancel(): Promise<void> {}
+  async watchCancel(id: string): Promise<void> {
+    this.watches = this.watches.filter((w) => w.id !== id);
+  }
   async close(): Promise<void> {}
 }
 

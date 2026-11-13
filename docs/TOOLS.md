@@ -287,20 +287,25 @@ List the title watches created with watch_title. Set check_now to also read each
 
 ## `cancel_watch`
 
-Stop and permanently delete a watch created with watch_title. TinyFish stops re-checking the title and sends no more notifications. Only watches made by Stacks can be cancelled; get the watch_id from list_watches.
+Stop and permanently delete a watch created with watch_title. TinyFish stops re-checking the title and sends no more notifications. Only watches made by Stacks can be cancelled; get the watch_id from list_watches. Set dry_run to see which watch would be cancelled without cancelling it, for example to confirm with the user first.
 
 **Input**
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `watch_id` | string | yes | The watch_id from watch_title or list_watches. |
+| `dry_run` | boolean | default `false` | If true, only report which watch would be cancelled. Nothing is deleted. |
 
 **Output**
 
 | Field | Type | Description |
 |---|---|---|
-| `cancelled` | boolean |  |
+| `cancelled` | boolean | True if the watch was deleted. Always false on a dry run. |
+| `dry_run` | boolean |  |
 | `watch_id` | string |  |
+| `library` | string |  |
+| `title_id` | string |  |
+| `title` | string,null |  |
 | `source` | object | Provenance of the data. |
 
 ## `health_check`

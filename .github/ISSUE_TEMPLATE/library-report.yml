@@ -1,0 +1,45 @@
+name: Library compatibility report
+description: Tell us how Stacks behaved on a library you tried, working or not. This is how the list of verified libraries grows.
+labels: [library-report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying Stacks on a real library. Reports of things that **work** are as useful as reports of things that do not.
+        Please do not paste API keys, library card numbers or other personal data.
+  - type: input
+    id: library
+    attributes: { label: Library id or catalogue URL, placeholder: "tpl, or https://example.bibliocommons.com" }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Stacks version, description: "From `npx stacks-mcp --version`.", placeholder: "0.1.1" }
+    validations: { required: true }
+  - type: checkboxes
+    id: worked
+    attributes:
+      label: What worked
+      options:
+        - label: search_catalog
+        - label: get_title
+        - label: check_availability
+        - label: estimate_wait
+        - label: list_branches / get_branch
+        - label: list_events
+        - label: ask_library
+        - label: watch_title
+  - type: textarea
+    id: problems
+    attributes:
+      label: What did not work
+      description: The tool, the arguments you used, and the error or wrong data it returned.
+      render: json
+  - type: textarea
+    id: health
+    attributes:
+      label: Health check output
+      description: "Optional but very helpful: the output of `npx stacks-mcp health --library <id>`."
+      render: text
+  - type: input
+    id: client
+    attributes: { label: MCP client, placeholder: "Claude Desktop, ChatGPT, Cursor, ..." }
