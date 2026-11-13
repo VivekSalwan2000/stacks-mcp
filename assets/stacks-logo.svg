@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Stacks logo: three stacked books">
+  <rect width="256" height="256" rx="56" fill="#10231F"/>
+  <!-- bottom book -->
+  <rect x="44" y="158" width="168" height="38" rx="9" fill="#14B8A6"/>
+  <rect x="58" y="170" width="44" height="6" rx="3" fill="#10231F" opacity=".45"/>
+  <rect x="184" y="158" width="10" height="38" fill="#0F766E"/>
+  <!-- middle book -->
+  <rect x="62" y="110" width="150" height="38" rx="9" fill="#F5B841"/>
+  <rect x="76" y="122" width="56" height="6" rx="3" fill="#10231F" opacity=".45"/>
+  <rect x="186" y="110" width="10" height="38" fill="#C98A12"/>
+  <!-- top book -->
+  <rect x="44" y="62" width="150" height="38" rx="9" fill="#F4F1EA"/>
+  <rect x="58" y="74" width="36" height="6" rx="3" fill="#10231F" opacity=".45"/>
+  <rect x="166" y="62" width="10" height="38" fill="#CFC9BC"/>
+  <!-- live signal -->
+  <circle cx="204" cy="52" r="11" fill="#14B8A6"/>
+  <circle cx="204" cy="52" r="20" fill="none" stroke="#14B8A6" stroke-width="3" opacity=".45"/>
+</svg>
