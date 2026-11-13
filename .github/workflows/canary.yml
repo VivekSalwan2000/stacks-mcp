@@ -24,7 +24,7 @@ jobs:
       TINYFISH_API_KEY: ${{ secrets.TINYFISH_API_KEY }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Skip when no TinyFish key is configured
         id: key
         run: |
