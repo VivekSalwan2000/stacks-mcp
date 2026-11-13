@@ -259,27 +259,28 @@ The [interactive explorer](https://viveksalwan2000.github.io/stacks-mcp/architec
 Every network call Stacks makes goes through TinyFish. Nothing is canned, and there is no other scraping code. All five endpoints have a real job, chosen for what each is good at.
 
 ```mermaid
-flowchart LR
-  call(["🤖 MCP tool call"]) --> zod["Input checked<br/>against the tool's schema"]
-  zod --> cache{"Cache:<br/>read recently?"}
-  cache -- "hit" --> out(["✅ Typed answer<br/>and its source"])
-  cache -- "miss" --> pace["Pacing<br/>750 ms per host · 4 pages at once"]
+flowchart TB
+  call(["🤖 MCP tool call"]) --> zod["Input checked against the tool's schema"]
+  zod -- "page data" --> cache{"Cache:<br/>read recently?"}
+  zod -- "everything else" --> OTHER
 
-  subgraph TF["🐟 TinyFish, through web.ts"]
-    direction TB
-    BR["🖥 <b>Browser</b><br/>catalogue, titles, branches, events"]
-    FE["📄 <b>Fetch</b><br/>is the catalogue live? page landmarks"]
-    SE["🔎 <b>Search</b><br/>find a library, find the right page"]
-    AG["🧭 <b>Agent</b><br/>open questions, fallback, diagnosis"]
+  cache -- "miss" --> pace["Pacing<br/>750 ms per host · 4 pages at once"]
+  pace --> BR["🖥 <b>Browser</b><br/>catalogue, titles, branches, events"]
+  BR --> contract{"contracts.ts:<br/>do the fields match?"}
+  contract -- "yes" --> parse["Parser<br/>page data → public shapes"]
+  contract -- "no" --> err["🚨 SITE_CHANGED<br/>with broken_fields"]
+
+  subgraph OTHER["The other four TinyFish endpoints"]
+    direction LR
+    FE["📄 <b>Fetch</b><br/>is it live?<br/>page landmarks"]
+    SE["🔎 <b>Search</b><br/>find a library<br/>or a page"]
+    AG["🧭 <b>Agent</b><br/>open questions<br/>fallback, diagnosis"]
     MO["🔔 <b>Monitor</b><br/>watches"]
   end
 
-  pace --> BR
-  zod --> FE & SE & AG & MO
-  BR --> contract{"contracts.ts:<br/>do the fields match?"}
-  contract -- "yes" --> parse["Parser<br/>page data → public shapes"] --> out
-  contract -- "no" --> err["🚨 SITE_CHANGED<br/>with broken_fields"]
-  FE & SE & AG & MO --> out
+  cache -- "hit" --> out(["✅ Typed answer and its source"])
+  parse --> out
+  OTHER --> out
 ```
 
 Page reads through Browser are the ones that are cached, paced and checked against the contract. The other four endpoints return to the tool that called them. The [interactive walkthrough](https://viveksalwan2000.github.io/stacks-mcp/architecture.html) plays this route step by step for ten real questions.
