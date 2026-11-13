@@ -2,7 +2,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist/", "coverage/", "node_modules/"] },
+  { ignores: ["dist/", "coverage/", "node_modules/", ".mcpb-build/"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -14,6 +14,11 @@ export default tseslint.config(
       // stdout carries the MCP protocol in stdio mode: a stray console.log would corrupt it.
       "no-console": ["error", { allow: ["error", "warn"] }],
     },
+  },
+  {
+    // Plain Node scripts: tell ESLint about the globals TypeScript files get from their types.
+    files: ["**/*.mjs"],
+    languageOptions: { globals: { console: "readonly", process: "readonly", URL: "readonly" } },
   },
   {
     // Tests read recorded site data and call tool handlers loosely; scripts and the CLI entry point print to the terminal.
