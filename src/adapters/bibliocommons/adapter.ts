@@ -289,7 +289,9 @@ export class BiblioCommonsAdapter implements LibraryAdapter {
   landmarks(id: string): Landmark[] {
     const base = this.catalogUrl(id);
     return [
-      { name: "search page", url: `${base}/v2/search?query=harry%20potter&searchType=smart`, must_contain: ["Filter your results", "Search result items"] },
+      // Only headings that survive Fetch's plain-text reading of the page. Since platform 9.39.0
+      // Fetch leaves out the "Filter your results" side panel on some libraries, though a browser shows it.
+      { name: "search page", url: `${base}/v2/search?query=harry%20potter&searchType=smart`, must_contain: ["Keyword search", "Search result items"] },
       { name: "events page", url: `${base}/v2/events`, must_contain: ["Event filters", "Event items"] },
       { name: "locations page", url: `${base}/v2/locations`, must_contain: ["Locations", "Get directions"] },
     ];

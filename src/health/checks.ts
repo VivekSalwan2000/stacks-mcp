@@ -18,7 +18,7 @@ import { agentSchema, startJob } from "../core/jobs.js";
 import type { Endpoint } from "../core/web.js";
 
 /** The BiblioCommons release these contracts were last verified against. */
-export const KNOWN_PLATFORM_VERSION = "9.38.3";
+export const KNOWN_PLATFORM_VERSION = "9.39.0";
 
 export const CheckSchema = z.object({
   name: z.string(),

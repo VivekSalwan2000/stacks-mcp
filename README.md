@@ -348,7 +348,7 @@ Healthy: 9 passed, 0 warning(s), 0 skipped.
   [PASS] list_events returns typed events  (browser)
          5980 upcoming events; 6 audiences, 27 event types
   [PASS] platform version  (browser)
-         BiblioCommons 9.38.3 (the verified version)
+         BiblioCommons 9.39.0 (the verified version)
 ```
 
 </details>

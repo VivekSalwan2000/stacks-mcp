@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- **The health check no longer reports a false break on BiblioCommons 9.39.0.** The platform update on 16 November changed how the search page reads as plain text: TinyFish Fetch no longer includes the "Filter your results" side panel at Toronto and Chicago, though it is still there in a browser. The daily canary flagged both libraries (issues #7 and #8) while every tool kept working, and its Agent diagnosis confirmed the page was fine. The search page landmark now checks the "Keyword search" and "Search result items" headings, which every library keeps.
+- Contracts verified against BiblioCommons 9.39.0 at Toronto, Vancouver, Chicago, Seattle, San Francisco and Calgary.
+
 ## 0.1.3
 
 Fixes and guards from a full audit and live test run.

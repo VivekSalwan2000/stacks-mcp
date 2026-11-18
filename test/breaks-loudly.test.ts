@@ -161,7 +161,7 @@ describe("false alarms and hidden failures", () => {
     web.serve("/v2/", null, {}, 200); // the library exists, but its pages lost their data
     let calls = 0;
     web.fetch = async (urls) => {
-      const full = "Filter your results Search result items Event filters Event items Locations Get directions";
+      const full = "Keyword search: harry potter Search result items Event filters Event items Locations Get directions";
       const text = ++calls === 1 ? "Search result items Event filters Event items Locations Get directions" : full;
       return urls.map((url) => ({ url, final_url: url, title: null, text }));
     };
