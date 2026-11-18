@@ -673,6 +673,8 @@ Contributions are welcome, and the project is laid out so they can be small.
 
 Every pull request runs lint, a type check, the tests and a build. Start with [CONTRIBUTING.md](CONTRIBUTING.md); the [code of conduct](CODE_OF_CONDUCT.md) and [changelog](CHANGELOG.md) are short.
 
+**Related project and credit:** [bibliocommons-mcp](https://github.com/pdugan20/bibliocommons-mcp) by Patrick Dugan works with your own library account: holds, checkouts and renewals, signed in with your card and PIN. Stacks covers the public side instead (no login, any BiblioCommons library, live through TinyFish), and a few of its guard rails were inspired by that project. The two work well side by side.
+
 **On the roadmap:** adapters for Aspen Discovery and Koha, a `nearest_copy` tool that combines shelf status with distance and opening hours, branch-level watches, and opt-in account actions such as placing holds.
 
 <p align="right"><a href="#stacks"><sub>↑ Back to top</sub></a></p>
