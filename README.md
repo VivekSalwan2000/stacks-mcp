@@ -21,12 +21,21 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-14B8A6.svg)](CONTRIBUTING.md)
 
-[**Quick start**](#-quick-start) · [**Tools**](#-tools) · [**Architecture**](#-how-tinyfish-is-used) · [**Reliability**](#-breaks-loudly) · [**Configuration**](#configuration) · [**Contributing**](#-contributing)
+[**▶ Demo video**](https://viveksalwan2000.github.io/stacks-mcp/demo.html) · [**Quick start**](#-quick-start) · [**Tools**](#-tools) · [**Architecture**](#-how-tinyfish-is-used) · [**Reliability**](#-breaks-loudly) · [**Configuration**](#configuration) · [**Contributing**](#-contributing)
 
 <br>
 
+<a href="https://viveksalwan2000.github.io/stacks-mcp/demo.html">
+  <img src="docs/media/demo-poster.jpg" width="900" alt="Play the Stacks demo video: Claude Desktop answers whether Project Hail Mary is on the shelf in Toronto right now, using Stacks tools that read the library's live catalogue through TinyFish.">
+</a>
+
+**[▶ Watch the 81-second demo, with voiceover](https://viveksalwan2000.github.io/stacks-mcp/demo.html)**<br>
+<sub>A real recording: Claude Desktop asks Toronto Public Library's live catalogue a question through Stacks. Captions included.</sub>
+
+<br><br>
+
 <a href="https://viveksalwan2000.github.io/stacks-mcp/architecture.html">
-  <img src="docs/media/explorer-preview.gif" width="900" alt="The Stacks system explorer stepping through ten real questions: each tool call lights up its path through Stacks and TinyFish to the library's website, while a side panel shows the question, the tool call and the typed result.">
+  <img src="docs/media/explorer-preview.gif" width="720" alt="The Stacks system explorer stepping through ten real questions: each tool call lights up its path through Stacks and TinyFish to the library's website, while a side panel shows the question, the tool call and the typed result.">
 </a>
 
 **[🧭 Open the interactive explorer](https://viveksalwan2000.github.io/stacks-mcp/architecture.html)**<br>
@@ -72,7 +81,7 @@
 
 *"I'm in Toronto. Is Project Hail Mary on the shelf anywhere, is that branch open now, and what's on there this week?"*
 
-To answer that, the agent makes five tool calls. Each one hands a real id to the next, so nothing is guessed along the way.
+To answer that, the agent makes five tool calls. Each one hands a real id to the next, so nothing is guessed along the way. The [demo video](https://viveksalwan2000.github.io/stacks-mcp/demo.html) shows a shorter version of this running live in Claude Desktop.
 
 ```mermaid
 flowchart LR

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stacks demo</title>
+<meta name="description" content="An 81-second demo of Stacks, an MCP server that gives AI agents live access to public library websites through TinyFish.">
+<meta property="og:title" content="Stacks: give your AI agent a library card">
+<meta property="og:description" content="Watch Claude answer a live library question through Stacks and TinyFish.">
+<meta property="og:image" content="https://viveksalwan2000.github.io/stacks-mcp/media/demo-poster.jpg">
+<meta property="og:type" content="video.other">
+<style>
+  :root { --bg:#0d1d1a; --panel:#132b26; --ink:#f4f1ea; --muted:#9fb3ad; --teal:#14b8a6; --amber:#f5b841; --line:#24423b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(1100px 700px at 80% 0%, rgba(20,184,166,.14), transparent 60%), var(--bg); color:var(--ink);
+    font-family:-apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height:1.5; min-height:100vh; }
+  main { max-width:1120px; margin:0 auto; padding:40px 16px 56px; }
+  header { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+  header svg { flex:none; }
+  h1 { font-size:clamp(24px, 4vw, 36px); line-height:1.15; margin:0; letter-spacing:-.02em; }
+  header p { margin:4px 0 0; color:var(--muted); }
+  video { display:block; width:100%; height:auto; border-radius:16px; background:#000; box-shadow:0 24px 70px rgba(0,0,0,.5); }
+  .links { display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; }
+  .links a { color:var(--ink); text-decoration:none; border:1px solid var(--line); background:var(--panel); padding:10px 16px; border-radius:999px; font-weight:600; font-size:15px; }
+  .links a:hover, .links a:focus-visible { border-color:var(--teal); outline:none; }
+  .links a.primary { background:var(--teal); border-color:var(--teal); color:#062b26; }
+  code { font-family:"SF Mono", Menlo, Consolas, monospace; color:var(--amber); }
+  .note { color:var(--muted); font-size:14px; margin-top:18px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg width="56" height="56" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" fill="#10231F"/><rect x="44" y="158" width="168" height="38" rx="9" fill="#14B8A6"/><rect x="62" y="110" width="150" height="38" rx="9" fill="#F5B841"/><rect x="44" y="62" width="150" height="38" rx="9" fill="#F4F1EA"/><circle cx="204" cy="52" r="11" fill="#14B8A6"/></svg>
+    <div>
+      <h1>Stacks: give your AI agent a library card</h1>
+      <p>Claude Desktop answers a live question from Toronto Public Library's catalogue, through Stacks and TinyFish.</p>
+    </div>
+  </header>
+
+  <video controls playsinline preload="metadata" poster="media/demo-still.jpg">
+    <source src="media/stacks-demo.mp4" type="video/mp4">
+    <track kind="captions" src="media/stacks-demo.vtt" srclang="en" label="English" default>
+    Your browser can't play this video. <a href="media/stacks-demo.mp4">Download it</a>.
+  </video>
+
+  <div class="links">
+    <a class="primary" href="https://github.com/VivekSalwan2000/stacks-mcp">Code on GitHub</a>
+    <a href="architecture.html">Interactive explorer</a>
+    <a href="https://www.npmjs.com/package/stacks-mcp">npm package</a>
+  </div>
+  <p class="note">Try it: <code>npx -y stacks-mcp</code> with a TinyFish API key. The demo is a real recording; the waiting part plays at 3.5× speed.</p>
+</main>
+</body>
+</html>

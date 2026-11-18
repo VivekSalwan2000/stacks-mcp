@@ -1,0 +1,157 @@
+WEBVTT
+
+1
+00:00:00.400 --> 00:00:01.633
+This is Stacks.
+
+2
+00:00:01.633 --> 00:00:04.920
+It gives your AI agent a library card.
+
+3
+00:00:05.520 --> 00:00:07.467
+Public libraries don't have an API.
+
+4
+00:00:07.467 --> 00:00:10.389
+Whether a book is on the shelf, how long
+
+5
+00:00:10.389 --> 00:00:12.985
+the hold queue is, when a branch closes:
+
+6
+00:00:12.985 --> 00:00:15.582
+it all lives on websites built for people.
+
+7
+00:00:15.582 --> 00:00:16.880
+So AI assistants guess.
+
+8
+00:00:17.330 --> 00:00:20.354
+So let's ask a real question, live, in Claude
+
+9
+00:00:20.354 --> 00:00:20.690
+Desktop.
+
+10
+00:00:21.290 --> 00:00:22.361
+I'm in Toronto.
+
+11
+00:00:22.361 --> 00:00:25.216
+Is Project Hail Mary on the shelf anywhere
+
+12
+00:00:25.216 --> 00:00:25.930
+right now?
+
+13
+00:00:26.890 --> 00:00:28.222
+Claude reaches for Stacks.
+
+14
+00:00:28.222 --> 00:00:30.219
+It searches Toronto's catalogue, then checks
+
+15
+00:00:30.219 --> 00:00:32.549
+every copy at every branch, live, through
+
+16
+00:00:32.549 --> 00:00:33.548
+a TinyFish browser.
+
+17
+00:00:33.548 --> 00:00:36.211
+Then it pulls today's hours for the branches
+
+18
+00:00:36.211 --> 00:00:37.210
+that have it.
+
+19
+00:00:37.747 --> 00:00:39.112
+And there's the answer.
+
+20
+00:00:39.112 --> 00:00:42.184
+Two copies on the shelf right now, at Northern
+
+21
+00:00:42.184 --> 00:00:44.573
+District and Barbara Frum, both open until
+
+22
+00:00:44.573 --> 00:00:45.256
+eight thirty.
+
+23
+00:00:45.256 --> 00:00:47.303
+Real shelf data, read seconds ago.
+
+24
+00:00:47.303 --> 00:00:48.327
+Not a guess.
+
+25
+00:00:49.077 --> 00:00:51.591
+Under the hood, all five TinyFish engines
+
+26
+00:00:51.591 --> 00:00:52.668
+do real work.
+
+27
+00:00:52.668 --> 00:00:55.182
+Browser reads the pages, Fetch checks them,
+
+28
+00:00:55.182 --> 00:00:57.336
+Search finds new libraries, Agent answers
+
+29
+00:00:57.336 --> 00:00:59.850
+open questions, and Monitor watches a book
+
+30
+00:00:59.850 --> 00:01:00.927
+until it's back.
+
+31
+00:01:01.377 --> 00:01:03.874
+And when a library's website changes, Stacks
+
+32
+00:01:03.874 --> 00:01:04.587
+breaks loudly.
+
+33
+00:01:04.587 --> 00:01:06.370
+This week the platform updated.
+
+34
+00:01:06.370 --> 00:01:09.224
+The daily canary caught it, an agent diagnosed
+
+35
+00:01:09.224 --> 00:01:12.077
+it, and the fix shipped the next day.
+
+36
+00:01:12.527 --> 00:01:12.948
+Stacks.
+
+37
+00:01:12.948 --> 00:01:15.055
+Fourteen tools, fifty-four library systems,
+
+38
+00:01:15.055 --> 00:01:16.318
+built with TinyFish.
+
+39
+00:01:16.318 --> 00:01:19.267
+It's open source, so try it today.
